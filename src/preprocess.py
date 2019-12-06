@@ -31,7 +31,7 @@ def remove_stop_words(tokens, stopping_words):
     return [x for x in tokens if x not in stopping_words]
 
 
-def find_stop_words(filename, percent=0.0004):
+def find_stop_words(filename, percent=0.0015):
     docs = read_docs(filename)
     fulltext = ''
     for doc in docs:
