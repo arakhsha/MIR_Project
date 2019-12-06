@@ -4,6 +4,8 @@ import string
 
 from hazm import *
 
+from preprocess import find_stop_words, remove_stop_words
+
 
 def normalize(text):
     normalizer = Normalizer()
@@ -26,11 +28,6 @@ def remove_punctuation(words):
             new_words.append(new_word)
     return new_words
 
-
-def remove_stopwords(words):
-    pass
-
-
 def stem(words):
     stemmer = Stemmer()
     new_words = []
@@ -45,7 +42,7 @@ def preprocess(text):
 
 if __name__ == "__main__":
     # text = input("Enter Text: ")
-    text = 'نوشته ها، جه بلند و چه کوتاه، بهتر شده اند!'
+    text = 'این نوشته ها، جه بلند و چه کوتاه، بهتر شده اند!'
 
     text = normalize(text)
     print("Normalized: ", text)
@@ -58,6 +55,14 @@ if __name__ == "__main__":
 
     words = remove_punctuation(words)
     print("Without Punctuation: ")
+    for word in words:
+        print(word, end='|')
+    print("\n")
+
+    print("Finding Stopwords...")
+    stopwords = find_stop_words("../data/Persian.xml", 0.001)
+    print("Without Stopwords:")
+    words = remove_stop_words(words, stopwords)
     for word in words:
         print(word, end='|')
     print("\n")
