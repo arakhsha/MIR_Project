@@ -3,8 +3,6 @@ import string
 import re
 from data_extaction import read_docs
 
-stemmer = nltk.PorterStemmer()
-
 
 def find_stop_words(self, filename, percent=0.0015):
     docs = read_docs(filename)
@@ -18,6 +16,7 @@ def find_stop_words(self, filename, percent=0.0015):
 
 class EnglishPreprocessor:
     stopping_words = []
+    stemmer = nltk.PorterStemmer()
 
     def set_stop_words(self, filename):
         self.stopping_words = find_stop_words(filename)
