@@ -2,6 +2,8 @@ import nltk
 import string
 import re
 
+from data_extaction import read_docs
+
 stemmer = nltk.PorterStemmer()
 
 
@@ -29,8 +31,12 @@ def remove_stop_words(tokens, stopping_words):
     return [x for x in tokens if x not in stopping_words]
 
 
-def find_stop_words(text, percent=0.3):
-    tokens = remove_punctuation(tokenize(normalize(text)))
+def find_stop_words(filename, percent=0.3):
+    docs = read_docs(filename)
+    fultext = ''
+    for doc in docs:
+        fultext += doc.text
+    tokens = remove_punctuation(tokenize(normalize(fultext)))
     ft = frequency_table(tokens, int(len(tokens) * percent))
     return [x for x, _ in ft]
 
@@ -47,7 +53,7 @@ def stem(tokens):
     return [stemmer.stem(t) for t in tokens]
 
 
-def preprocess(text, stopping_words=nltk.corpus.stopwords.words('english')):
+def preprocess(text, stopping_words):
     tokens = remove_punctuation(tokenize(normalize(text)))
     stems = stem(remove_stop_words(tokens, stopping_words))
     return filter_tokens(stems)
@@ -55,10 +61,11 @@ def preprocess(text, stopping_words=nltk.corpus.stopwords.words('english')):
 
 if __name__ == "__main__":
     # I'm reading this loud to this kids. These self-identifying kids nowadays read more than I ever did.
-    s = input()
-    ts = preprocess(s)
-    print(ts)
-    print(frequency_table(ts, 3))
+    print("Stop Words:", find_stop_words("../data/English.csv"))
+    # s = input()
+    # ts = preprocess(s)
+    # print(ts)
+    # print(frequency_table(ts, 3))
 
 
 
