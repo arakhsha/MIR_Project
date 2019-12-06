@@ -2,8 +2,15 @@ import nltk
 import string
 import re
 
-stopwords = nltk.corpus.stopwords.words('english')
 stemmer = nltk.PorterStemmer()
+
+
+def frequency_table(tokens, n=0):
+    import collections
+    counter = collections.Counter(tokens)
+    if n == 0:
+        n = len(tokens)
+    return counter.most_common(n)
 
 
 def normalize(text):
@@ -18,16 +25,14 @@ def remove_punctuation(tokens):
     return [t for t in tokens if t not in string.punctuation]
 
 
-def is_stop_word(token):
-    return token.lower() in stopwords
+def remove_stop_words(tokens, stopping_words):
+    return [x for x in tokens if x not in stopping_words]
 
 
-def remove_stop_words(tokens):
-    return [t for t in tokens if t.lower() not in stopwords]
-
-
-def stem(tokens):
-    return [stemmer.stem(t) for t in tokens]
+def find_stop_words(text, percent=0.3):
+    tokens = remove_punctuation(tokenize(normalize(text)))
+    ft = frequency_table(tokens, int(len(tokens) * percent))
+    return [x for x, _ in ft]
 
 
 def filter_tokens(tokens, min_size=0, special_chars=False):
@@ -38,14 +43,14 @@ def filter_tokens(tokens, min_size=0, special_chars=False):
     return tokens
 
 
-def preprocess(text):
-    return filter_tokens(stem(remove_stop_words(remove_punctuation(tokenize(normalize(text))))), 3, True)
+def stem(tokens):
+    return [stemmer.stem(t) for t in tokens]
 
 
-def frequency_table(tokens, n):
-    import collections
-    counter = collections.Counter(tokens)
-    return counter.most_common(n)
+def preprocess(text, stopping_words=nltk.corpus.stopwords.words('english')):
+    tokens = remove_punctuation(tokenize(normalize(text)))
+    stems = stem(remove_stop_words(tokens, stopping_words))
+    return filter_tokens(stems)
 
 
 if __name__ == "__main__":
