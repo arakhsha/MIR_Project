@@ -31,14 +31,14 @@ def remove_stop_words(tokens, stopping_words):
     return [x for x in tokens if x not in stopping_words]
 
 
-def find_stop_words(filename, percent=0.3):
+def find_stop_words(filename, percent=0.0004):
     docs = read_docs(filename)
-    fultext = ''
+    fulltext = ''
     for doc in docs:
-        fultext += doc.text
-    tokens = remove_punctuation(tokenize(normalize(fultext)))
-    ft = frequency_table(tokens, int(len(tokens) * percent))
-    return [x for x, _ in ft]
+        fulltext += doc.text
+    tokens = remove_punctuation(tokenize(normalize(fulltext)))
+    ft = frequency_table(tokens)
+    return [x for x,y in ft if y > percent*len(tokens)]
 
 
 def filter_tokens(tokens, min_size=0, special_chars=False):
