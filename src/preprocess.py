@@ -23,6 +23,11 @@ class EnglishPreprocessor:
         ft = self.frequency_table(tokens)
         return [x for x, y in ft if y > percent * len(tokens)]
 
+
+class EnglishPreprocessor:
+    stopping_words = []
+    stemmer = nltk.PorterStemmer()
+
     def set_stop_words(self, filename):
         self.stopping_words = self.find_stop_words(filename)
 
