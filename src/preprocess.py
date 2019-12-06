@@ -1,48 +1,63 @@
 from __future__ import unicode_literals
+
+from abc import abstractmethod
+
 import nltk
-import string
 import re
 from data_extaction import read_docs
-
 import string
 
 from hazm import *
 
-stemmer = nltk.PorterStemmer()
+
+def frequency_table(tokens, n=0):
+    import collections
+    counter = collections.Counter(tokens)
+    if n == 0:
+        n = len(tokens)
+    return counter.most_common(n)
 
 
-
-class EnglishPreprocessor:
+class Preprocessor:
     stopping_words = []
-    stemmer = nltk.PorterStemmer()
+    stop_word_percent = 0.0015
+    filename = ""
 
-    def find_stop_words(self, filename, percent=0.0015):
-        docs = read_docs(filename)
+    def freq_tokens(self):
+        docs = read_docs(self.filename)
         fulltext = ''
         for doc in docs:
             fulltext += doc.text
         tokens = self.remove_punctuation(self.tokenize(self.normalize(fulltext)))
-        ft = self.frequency_table(tokens)
-        return [x for x, y in ft if y > percent * len(tokens)]
+        ft = frequency_table(tokens)
+        return ft, len(tokens)
 
-    def set_stop_words(self, filename):
-        self.stopping_words = self.find_stop_words(filename)
+    def print_high_freq_tokens(self, percent=stop_word_percent):
+        ft, size = self.freq_tokens()
 
-    def frequency_table(self, tokens, n=0):
-        import collections
-        counter = collections.Counter(tokens)
-        if n == 0:
-            n = len(tokens)
-        return counter.most_common(n)
+        print("word\tpercent")
+        for w, f in ft:
+            if f > percent*size:
+                print("{}\t{}".format(w, f/size))
 
-    def normalize(self, text):
-        return text.lower()
+    def find_stop_words(self, percent=stop_word_percent):
+        ft,size = self.freq_tokens()
+        return [x for x, y in ft if y > percent * size]
 
-    def tokenize(self, text):
-        return nltk.tokenize.word_tokenize(text)
-
+    @abstractmethod
     def remove_punctuation(self, tokens):
-        return [t for t in tokens if t not in string.punctuation]
+        pass
+
+    @abstractmethod
+    def normalize(self, text):
+        pass
+
+    @abstractmethod
+    def tokenize(self, text):
+        pass
+
+    def stem(self, tokens):
+        return [self.stemmer.stem(t) for t in tokens]
 
     def remove_stop_words(self, tokens):
         return [x for x in tokens if x not in self.stopping_words]
@@ -54,8 +69,8 @@ class EnglishPreprocessor:
             tokens = [t for t in tokens if re.search('[^a-zA-Z-]', t) is None]
         return tokens
 
-    def stem(self, tokens):
-        return [stemmer.stem(t) for t in tokens]
+    def set_stop_words(self):
+        self.stopping_words = self.find_stop_words()
 
     def preprocess(self, text, log=False):
         s = "|"
@@ -78,33 +93,27 @@ class EnglishPreprocessor:
             print("Stemmed:", s.join(stems))
         return self.filter_tokens(stems)
 
+    def __init__(self, filename, stemmer):
+        self.filename = filename
+        self.set_stop_words()
+        self.stemmer = stemmer
+
+
+class EnglishPreprocessor(Preprocessor):
+    def normalize(self, text):
+        return text.lower()
+
+    def tokenize(self, text):
+        return nltk.tokenize.word_tokenize(text)
+
+    def remove_punctuation(self, tokens):
+        return [t for t in tokens if t not in string.punctuation]
+
     def __init__(self, filename):
-        self.set_stop_words(filename)
+        super().__init__(filename, nltk.PorterStemmer())
 
 
-
-class PersianPreprocessor:
-    stopping_words = []
-
-    def find_stop_words(self, filename, percent=0.0015):
-        docs = read_docs(filename)
-        fulltext = ''
-        for doc in docs:
-            fulltext += doc.text
-        tokens = self.remove_punctuation(self.tokenize(self.normalize(fulltext)))
-        ft = self.frequency_table(tokens)
-        return [x for x, y in ft if y > percent * len(tokens)]
-
-    def set_stop_words(self, filename):
-        self.stopping_words = self.find_stop_words(filename)
-
-    def frequency_table(self, tokens, n=0):
-        import collections
-        counter = collections.Counter(tokens)
-        if n == 0:
-            n = len(tokens)
-        return counter.most_common(n)
-
+class PersianPreprocessor(Preprocessor):
     def normalize(self, text):
         normalizer = Normalizer()
         return normalizer.normalize(text)
@@ -124,43 +133,8 @@ class PersianPreprocessor:
                 new_words.append(new_word)
         return new_words
 
-    def remove_stop_words(self, tokens):
-        return [x for x in tokens if x not in self.stopping_words]
-
-    def filter_tokens(self, tokens, min_size=0, special_chars=False):
-        if min_size > 0:
-            tokens = [t for t in tokens if len(t) >= min_size]
-        if special_chars:
-            tokens = [t for t in tokens if re.search('[^a-zA-Z-]', t) is None]
-        return tokens
-
-    def stem(self, tokens):
-        stemmer = Stemmer()
-        return [stemmer.stem(t) for t in tokens]
-
-    def preprocess(self, text, log=False):
-        s = "|"
-        if log:
-            print("Input:", text)
-        text = self.normalize(text)
-        if log:
-            print("Normalized:", text)
-        tokens = self.tokenize(text)
-        if log:
-            print("Tokens:", s.join(tokens))
-        tokens = self.remove_punctuation(tokens)
-        if log:
-            print("Without Pnctuation:", s.join(tokens))
-        tokens = self.remove_stop_words(tokens)
-        if log:
-            print("Without stopping words:", s.join(tokens))
-        stems = self.stem(tokens)
-        if log:
-            print("Stemmed:", s.join(stems))
-        return self.filter_tokens(stems)
-
     def __init__(self, filename):
-        self.set_stop_words(filename)
+        super().__init__(filename, Stemmer())
 
 
 if __name__ == "__main__":
@@ -179,9 +153,5 @@ if __name__ == "__main__":
 
     if task == "1":
         preprocessor.preprocess(input("Enter text:"), True)
-
-
-
-
-
-
+    elif task == "2":
+        preprocessor.print_high_freq_tokens()
