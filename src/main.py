@@ -10,7 +10,7 @@ else:
     preprocessor = PersianPreprocessor(docs)
 
 for doc in docs:
-    doc.terms = preprocessor.preprocess(doc.text)
+    doc.words = preprocessor.preprocess(doc.text)
 
 print(docs[0].text)
-print(docs[0].terms)
+print(docs[0].words)
