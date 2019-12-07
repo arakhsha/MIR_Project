@@ -3,8 +3,10 @@ class PositionalIndexer:
     docs = []
     gram = None
 
-    def create_index(self, docs):
-        pass
+    def create_index(self):
+        self.index = {}
+        for doc in self.docs:
+            self.add_doc(doc)
 
     def add_doc(self, doc):
         pass
@@ -26,5 +28,5 @@ class PositionalIndexer:
     def __init__(self, docs, gram):
         self.docs = docs
         self.gram = gram
-        self.create_index(docs, gram)
+        self.create_index()
 
