@@ -73,6 +73,71 @@ def compress_index(index, is_gamma):
     return cindex
 
 
+def decompress_number_gamma(previous, compressed):
+    compressed_bin_str = str(compressed).split("\'")[1]
+    value_pos = compressed_bin_str.find('0') + 1
+    value_str = compressed_bin_str[value_pos:value_pos + value_pos]
+    value = int(value_str, 2)
+    if previous is None:
+        return value
+    return previous + value
+
+
+def decompress_number_vl(previous, compressed):
+    compressed_bin_str = str(compressed).split("\'")[1]
+    value_str = ''
+    last_byte = False
+    for i in range(len(compressed_bin_str)):
+        if i % 8 != 0:
+            value_str += compressed_bin_str[i]
+        else:
+            if last_byte:
+                break
+            if compressed_bin_str[i] == '1':
+                last_byte = True
+    value = int(value_str, 2)
+    if previous is None:
+        return value
+    return previous + value
+
+
+def decompress_number(previous, number, is_gamma):
+    if is_gamma:
+        return decompress_number_gamma(previous, number)
+    return decompress_number_vl(previous, number)
+
+
+def decompress_positions(cpositions, is_gamma):
+    positions = []
+    for i in range(len(cpositions)):
+        if i == 0:
+            previous = None
+        else:
+            previous = positions[i - 1]
+        current = cpositions[i]
+        positions.append(decompress_number(previous, current, is_gamma))
+    return positions
+
+
+def decompress_record(record, is_gamma):
+    postings = []
+    for i in range(len(record.postings)):
+        if i == 0:
+            previous_id = None
+        else:
+            previous_id = postings[i - 1].doc_id
+        current_id = record.postings[i].doc_id
+        decompressed_id = decompress_number(previous_id, current_id, is_gamma)
+        decompressed_positions = decompress_positions(record.postings[i].positions, is_gamma)
+        postings.append(Posting(decompressed_id, decompressed_positions))
+    return Record(record.term, postings)
+
+
+def decompress_index(cindex, is_gamma):
+    index = {}
+    for record in cindex.values():
+        index[record.term] = decompress_record(record, is_gamma)
+    return index
 
 
 def decompress_index(index):
@@ -88,4 +153,10 @@ if __name__ == "__main__":
 
     record = Record('first', [Posting(10, [1]), Posting(11, [1])])
     compressed_record = compress_record(record, True)
+    decompressed_record = decompress_record(compressed_record, True)
+
     compressed_record = compress_record(record, False)
+    decompressed_record = decompress_record(compressed_record, False)
+
+    print("decompress_number_gamma(2, bitarray('1110101'))", decompress_number_gamma(2, bitarray('1110101')))
+    print("decompress_number_vl(2, bitarray('0000000110000000'))", decompress_number_vl(2, bitarray('0000000110000000')))
