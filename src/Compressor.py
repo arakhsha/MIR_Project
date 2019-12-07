@@ -140,9 +140,6 @@ def decompress_index(cindex, is_gamma):
     return index
 
 
-def decompress_index(index):
-    pass
-
 
 if __name__ == "__main__":
     print("compress_number_vl(None, 214577)", compress_number_vl(None, 214577))
