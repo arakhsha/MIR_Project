@@ -3,7 +3,6 @@ from Record import Record
 
 class PositionalIndexer:
     def create_index(self):
-        self.index = {}
         for doc in self.docs:
             self.add_doc(doc)
 
@@ -34,6 +33,7 @@ class PositionalIndexer:
         return result
 
     def __init__(self, docs, gram):
+        self.index = {}
         self.docs = docs
         self.gram = gram
         self.create_index()
