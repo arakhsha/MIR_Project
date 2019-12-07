@@ -23,7 +23,7 @@ class Preprocessor:
 
     def freq_tokens(self):
         fulltext = ''
-        for doc in self.docs:
+        for doc in self.docs.values():
             fulltext += doc.text
         tokens = self.remove_punctuation(self.tokenize(self.normalize(fulltext)))
         tokens = self.filter_tokens(tokens)

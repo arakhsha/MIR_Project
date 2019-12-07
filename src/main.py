@@ -9,7 +9,7 @@ else:
     docs = read_docs('../data/Persian.xml')
     preprocessor = PersianPreprocessor(docs)
 
-for doc in docs:
+for doc in docs.values():
     doc.words = preprocessor.preprocess(doc.text)
 
 print(docs[0].text)
