@@ -1,8 +1,3 @@
-class Posting:
-    doc_id = None
-    positions = []
-
-
 class PositionalIndexer:
     index = {}
     docs = []
