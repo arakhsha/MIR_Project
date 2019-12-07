@@ -1,4 +1,4 @@
-class Term:
+class Record:
     str = None
     postings = []
 
