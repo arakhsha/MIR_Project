@@ -1,16 +1,6 @@
 import xml.etree.ElementTree as ET
-
+from Doc import Doc
 import pandas as pd
-
-
-class Doc:
-    id = None
-    text = None
-    words = None
-
-    def __init__(self, id, text):
-        self.id = id
-        self.text = text
 
 
 def extract_xml(filename):
