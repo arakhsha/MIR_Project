@@ -1,3 +1,6 @@
+from Record import Record
+
+
 class PositionalIndexer:
     index = {}
     docs = {}
@@ -9,7 +12,12 @@ class PositionalIndexer:
             self.add_doc(doc)
 
     def add_doc(self, doc):
-        pass
+        terms = self.get_terms(doc)
+        for i in range(len(terms)):
+            term = terms[i]
+            if self.index[term] is None:
+                self.index[terms] = Record(term, [])
+            self.index[term].add_position(doc, i)
 
     def remove_doc(self, id):
         term_keys = self.get_terms(self.docs[id])
