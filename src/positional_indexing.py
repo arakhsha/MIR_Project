@@ -1,16 +1,16 @@
 class Posting:
     doc_id = None
-    positions = None
+    positions = []
 
 
-class Indexer:
+class PositionalIndexer:
     index = None
     docs = None
 
-    def create_index(filename, language):
+    def create_index(docs):
         pass
 
-    def add_doc(self, id, text):
+    def add_doc(self, doc):
         pass
 
     def remove_doc(self, id):
