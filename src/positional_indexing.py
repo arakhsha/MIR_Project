@@ -8,10 +8,10 @@ class PositionalIndexer:
     docs = []
     gram = None
 
-    def create_index(self, docs, gram):
+    def create_index(self, docs):
         pass
 
-    def add_doc(self, doc, gram):
+    def add_doc(self, doc):
         pass
 
     def remove_doc(self, id):
@@ -19,6 +19,14 @@ class PositionalIndexer:
 
     def get_postings(self, term):
         pass
+
+    def get_terms(self, doc):
+        words = doc.words
+        size = len(words)
+        result = []
+        for i in range(size-self.gram+1):
+            result.append(doc[i: i+self.gram].join(" "))
+        return result
 
     def __init__(self, docs, gram):
         self.docs = docs

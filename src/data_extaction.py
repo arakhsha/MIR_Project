@@ -6,7 +6,7 @@ import pandas as pd
 class Doc:
     id = None
     text = None
-    terms = None
+    words = None
 
     def __init__(self, id, text):
         self.id = id
