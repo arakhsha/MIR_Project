@@ -8,7 +8,7 @@ def extract_xml(filename):
     root = tree.getroot()
     docs = {}
     for page in root.findall("{http://www.mediawiki.org/xml/export-0.10/}page"):
-        id = page.find("{http://www.mediawiki.org/xml/export-0.10/}id").text
+        id = int(page.find("{http://www.mediawiki.org/xml/export-0.10/}id").text)
         text = page.find("{http://www.mediawiki.org/xml/export-0.10/}revision") \
             .find("{http://www.mediawiki.org/xml/export-0.10/}text").text
         docs[id] = Doc(id, text)
