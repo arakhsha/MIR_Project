@@ -10,4 +10,4 @@ class Posting:
 
     def add_position(self, position):
         index, exists = binary_search(self.positions, position)
-        self.positions.inser(index, position)
+        self.positions.insert(index, position)

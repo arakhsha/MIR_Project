@@ -17,6 +17,13 @@ class Record:
         doc_ids = [posting.doc_id for posting in self.postings]
         return binary_search(doc_ids, doc_id)
 
+    def get_posting(self, doc_id):
+        index, exists = self.find_doc_index(doc_id)
+        if exists:
+            return self.postings[index]
+        else:
+            return None
+
     def remove_doc(self, doc_id):
         index, exists = self.find_doc_index(doc_id)
         if exists:
