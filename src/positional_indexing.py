@@ -1,6 +1,6 @@
 class PositionalIndexer:
     index = {}
-    docs = []
+    docs = {}
     gram = None
 
     def create_index(self):
@@ -12,10 +12,14 @@ class PositionalIndexer:
         pass
 
     def remove_doc(self, id):
+        term_keys = self.get_terms(self.docs[id])
+        for term_key in term_keys:
+            self.index[term_key].remove_doc(id)
+
         pass
 
     def get_postings(self, term):
-        pass
+        return self.index[term].postings
 
     def get_terms(self, doc):
         words = doc.words
