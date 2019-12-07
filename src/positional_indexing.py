@@ -3,16 +3,16 @@ from Record import Record
 
 class PositionalIndexer:
     def create_index(self):
-        for doc in self.docs.values():
-            self.add_doc(doc)
+        for doc_id in self.docs.keys():
+            self.add_doc(doc_id)
 
-    def add_doc(self, doc):
-        terms = self.get_terms(doc)
+    def add_doc(self, doc_id):
+        terms = self.get_terms(doc_id)
         for i in range(len(terms)):
             term = terms[i]
             if self.index[term] is None:
                 self.index[terms] = Record(term, [])
-            self.index[term].add_position(doc, i)
+            self.index[term].add_position(doc_id, i)
 
     def remove_doc(self, id):
         term_keys = self.get_terms(self.docs[id])
@@ -24,7 +24,8 @@ class PositionalIndexer:
     def get_postings(self, term):
         return self.index[term].postings
 
-    def get_terms(self, doc):
+    def get_terms(self, doc_id):
+        doc = self.docs[doc_id]
         words = doc.words
         size = len(words)
         result = []

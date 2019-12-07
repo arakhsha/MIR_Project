@@ -3,7 +3,7 @@ class Record:
     def get_idf(self, total_count):
         pass
 
-    def add_position(self, doc, location):
+    def add_position(self, doc_id, location):
         pass
 
     def remove_doc(self, doc_id):
