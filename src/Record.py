@@ -1,6 +1,4 @@
 class Record:
-    str = None
-    postings = []
 
     def get_idf(self, total_count):
         pass
@@ -12,6 +10,8 @@ class Record:
         if doc_id in self.postings:
             del self.postings[doc_id]
 
-    def __init__(self, str, postings = []):
-        self.str = str
+    def __init__(self, term, postings=None):
+        if postings is None:
+            postings = {}
+        self.term = term
         self.postings = postings

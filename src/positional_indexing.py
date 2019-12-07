@@ -2,10 +2,6 @@ from Record import Record
 
 
 class PositionalIndexer:
-    index = {}
-    docs = {}
-    gram = None
-
     def create_index(self):
         self.index = {}
         for doc in self.docs:
