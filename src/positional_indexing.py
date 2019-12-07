@@ -1,3 +1,4 @@
+from Doc import Doc
 from Record import Record
 from pathlib import Path
 import pickle
@@ -5,6 +6,18 @@ import pickle
 from data_extaction import read_docs
 from preprocess import EnglishPreprocessor, PersianPreprocessor
 
+
+def unique(list1):
+    # intilize a null list
+    unique_list = []
+
+    # traverse for all elements
+    for x in list1:
+        # check if exists in unique_list or not
+        if x not in unique_list:
+            unique_list.append(x)
+            # print list
+    return unique_list
 
 class PositionalIndexer:
     def create_index(self):
@@ -32,17 +45,28 @@ class PositionalIndexer:
 
     def get_terms(self, doc_id):
         words = self.docs[doc_id].words
-        size = len(words)
-        result = []
-        for i in range(size - self.gram + 1):
-            result.append(" ".join(words[i: i + self.gram]))
-        return result
+        return words
 
     def __init__(self, docs, gram):
         self.index = {}
         self.docs = docs
         self.gram = gram
+        if self.gram == 2:
+            all_words = unique([inner
+                         for outer in docs
+                            for inner in docs[outer].words])
+            new_docs = {}
+            for i in range(len(all_words)):
+                word = "#"+all_words[i]+"#"
+                id = i
+                words = [word[j:j+2] for j in range(len(word) - 1)]
+                doc = Doc(id, ' '.join(words))
+                doc.words = words
+                new_docs[id] = doc
+            self.docs = new_docs
+
         self.create_index()
+
 
 
 def save_index(index, filename):
