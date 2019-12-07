@@ -19,9 +19,7 @@ def frequency_table(tokens, n=0):
 
 
 class Preprocessor:
-    stopping_words = []
     stop_word_percent = 0.0015
-    docs = None
 
     def freq_tokens(self):
         fulltext = ''
@@ -37,11 +35,11 @@ class Preprocessor:
 
         print("word\tpercent")
         for w, f in ft:
-            if f > percent*size:
-                print("{}\t{}".format(w, f/size))
+            if f > percent * size:
+                print("{}\t{}".format(w, f / size))
 
     def find_stop_words(self, percent=stop_word_percent):
-        ft,size = self.freq_tokens()
+        ft, size = self.freq_tokens()
         return [x for x, y in ft if y > percent * size]
 
     @abstractmethod
@@ -69,9 +67,6 @@ class Preprocessor:
             tokens = [t for t in tokens if re.search('[^a-zA-Z-]', t) is None]
         return tokens
 
-    def set_stop_words(self):
-        self.stopping_words = self.find_stop_words()
-
     def preprocess(self, text, log=False):
         s = "|"
         if log:
@@ -95,7 +90,7 @@ class Preprocessor:
 
     def __init__(self, docs, stemmer):
         self.docs = docs
-        self.set_stop_words()
+        self.stopping_words = self.find_stop_words()
         self.stemmer = stemmer
 
 
@@ -137,7 +132,6 @@ class PersianPreprocessor(Preprocessor):
         tokens = super().filter_tokens(tokens, min_size, special_chars)
         tokens = [t for t in tokens if re.search('[a-zA-Z-]', t) is None]
         return tokens
-
 
     def __init__(self, docs):
         super().__init__(docs, Stemmer())
