@@ -21,12 +21,11 @@ def frequency_table(tokens, n=0):
 class Preprocessor:
     stopping_words = []
     stop_word_percent = 0.0015
-    filename = ""
+    docs = None
 
     def freq_tokens(self):
-        docs = read_docs(self.filename)
         fulltext = ''
-        for doc in docs:
+        for doc in self.docs:
             fulltext += doc.text
         tokens = self.remove_punctuation(self.tokenize(self.normalize(fulltext)))
         tokens = self.filter_tokens(tokens)
@@ -94,8 +93,8 @@ class Preprocessor:
             print("Stemmed:", s.join(stems))
         return self.filter_tokens(stems)
 
-    def __init__(self, filename, stemmer):
-        self.filename = filename
+    def __init__(self, docs, stemmer):
+        self.docs = docs
         self.set_stop_words()
         self.stemmer = stemmer
 
@@ -110,8 +109,8 @@ class EnglishPreprocessor(Preprocessor):
     def remove_punctuation(self, tokens):
         return [t for t in tokens if t not in string.punctuation]
 
-    def __init__(self, filename):
-        super().__init__(filename, nltk.PorterStemmer())
+    def __init__(self, docs):
+        super().__init__(docs, nltk.PorterStemmer())
 
 
 class PersianPreprocessor(Preprocessor):
@@ -140,8 +139,8 @@ class PersianPreprocessor(Preprocessor):
         return tokens
 
 
-    def __init__(self, filename):
-        super().__init__(filename, Stemmer())
+    def __init__(self, docs):
+        super().__init__(docs, Stemmer())
 
 
 if __name__ == "__main__":
@@ -154,9 +153,11 @@ if __name__ == "__main__":
     task = input("Select task: 1. Preprocess a text 2. Show frequent words")
     language = input("Select language: 1. English 2. Persian")
     if language == "1":
-        preprocessor = EnglishPreprocessor('../data/English.csv')
+        docs = read_docs('../data/English.csv')
+        preprocessor = EnglishPreprocessor(docs)
     else:
-        preprocessor = PersianPreprocessor('../data/Persian.xml')
+        docs = read_docs('../data/Persian.xml')
+        preprocessor = PersianPreprocessor(docs)
 
     if task == "1":
         preprocessor.preprocess(input("Enter text:"), True)
