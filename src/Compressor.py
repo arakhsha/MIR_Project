@@ -3,6 +3,11 @@ from bitarray import bitarray
 from Posting import Posting
 from Record import Record
 
+from positional_indexing import PositionalIndexer, save_index, load_index
+
+from data_extaction import read_docs
+from preprocess import EnglishPreprocessor, PersianPreprocessor
+
 
 def compress_number_gamma(previous, number):
     if previous is None:
@@ -73,19 +78,137 @@ def compress_index(index, is_gamma):
     return cindex
 
 
+def decompress_number_gamma(previous, compressed):
+    compressed_bin_str = str(compressed).split("\'")[1]
+    value_pos = compressed_bin_str.find('0') + 1
+    value_str = compressed_bin_str[value_pos:value_pos + value_pos]
+    value = int(value_str, 2)
+    if previous is None:
+        return value
+    return previous + value
 
 
-def decompress_index(index):
-    pass
+def decompress_number_vl(previous, compressed):
+    compressed_bin_str = str(compressed).split("\'")[1]
+    value_str = ''
+    last_byte = False
+    for i in range(len(compressed_bin_str)):
+        if i % 8 != 0:
+            value_str += compressed_bin_str[i]
+        else:
+            if last_byte:
+                break
+            if compressed_bin_str[i] == '1':
+                last_byte = True
+    value = int(value_str, 2)
+    if previous is None:
+        return value
+    return previous + value
+
+
+def decompress_number(previous, number, is_gamma):
+    if is_gamma:
+        return decompress_number_gamma(previous, number)
+    return decompress_number_vl(previous, number)
+
+
+def decompress_positions(cpositions, is_gamma):
+    positions = []
+    for i in range(len(cpositions)):
+        if i == 0:
+            previous = None
+        else:
+            previous = positions[i - 1]
+        current = cpositions[i]
+        positions.append(decompress_number(previous, current, is_gamma))
+    return positions
+
+
+def decompress_record(record, is_gamma):
+    postings = []
+    for i in range(len(record.postings)):
+        if i == 0:
+            previous_id = None
+        else:
+            previous_id = postings[i - 1].doc_id
+        current_id = record.postings[i].doc_id
+        decompressed_id = decompress_number(previous_id, current_id, is_gamma)
+        decompressed_positions = decompress_positions(record.postings[i].positions, is_gamma)
+        postings.append(Posting(decompressed_id, decompressed_positions))
+    return Record(record.term, postings)
+
+
+def decompress_index(cindex, is_gamma):
+    index = {}
+    for record in cindex.values():
+        index[record.term] = decompress_record(record, is_gamma)
+    return index
+
+
 
 
 if __name__ == "__main__":
-    print("compress_number_vl(None, 214577)", compress_number_vl(None, 214577))
-    print("compress_number_gamma(None, 5)", compress_number_gamma(None, 5))
+    # print("compress_number_vl(None, 214577)", compress_number_vl(None, 214577))
+    # print("compress_number_gamma(None, 5)", compress_number_gamma(None, 5))
+    #
+    # print("compress_positions([5, 5, 6, 7, 9], False)", compress_positions([5, 5, 6, 7, 9], False))
+    # print("compress_positions([5, 5, 6, 7, 9], True)", compress_positions([5, 5, 6, 7, 9], True))
+    #
+    # record = Record('first', [Posting(10, [1]), Posting(11, [1])])
+    # compressed_record = compress_record(record, True)
+    # decompressed_record = decompress_record(compressed_record, True)
+    #
+    # compressed_record = compress_record(record, False)
+    # decompressed_record = decompress_record(compressed_record, False)
+    #
+    # print("decompress_number_gamma(2, bitarray('1110101'))", decompress_number_gamma(2, bitarray('1110101')))
+    # print("decompress_number_vl(2, bitarray('0000000110000000'))", decompress_number_vl(2, bitarray('0000000110000000')))
 
-    print("compress_positions([5, 5, 6, 7, 9], False)", compress_positions([5, 5, 6, 7, 9], False))
-    print("compress_positions([5, 5, 6, 7, 9], True)", compress_positions([5, 5, 6, 7, 9], True))
+    language = input("INDEX\nSelect language:\n1. English\n2. Persian")
+    ngram = int(input("How many grams?"))
 
-    record = Record('first', [Posting(10, [1]), Posting(11, [1])])
-    compressed_record = compress_record(record, True)
-    compressed_record = compress_record(record, False)
+    if language == "1":
+        docs = read_docs('../data/English.csv')
+        preprocessor = EnglishPreprocessor(docs)
+    else:
+        docs = read_docs('../data/Persian.xml')
+        preprocessor = PersianPreprocessor(docs)
+
+    for doc in docs.values():
+        doc.words = preprocessor.preprocess(doc.text)
+
+    print("Preprocess is done!")
+
+    index = PositionalIndexer(docs, ngram)
+    print("Index Created Successfully!")
+
+    save_file_address = "../data/saved_" + ("en" if language == "1" else "fa") + "_" + str(ngram) + ".dat"
+    save_index(index, save_file_address)
+    print("Index Saved Successfully!")
+
+    gamma_compressed = PositionalIndexer(docs, ngram)
+    gamma_compressed.index = compress_index(gamma_compressed.index, True)
+    save_file_address = "../data/saved_" + ("en" if language == "1" else "fa") + "_" + str(ngram) + "_gamma.dat"
+    save_index(gamma_compressed, save_file_address)
+    print("Gamma Compressed Index Saved Successfully!")
+
+    gamma_decompressed = load_index(save_file_address)
+    gamma_decompressed.index = decompress_index(gamma_decompressed.index, True)
+    save_file_address = "../data/saved_" + ("en" if language == "1" else "fa") + "_" + str(ngram) + "_gamma_restored.dat"
+    save_index(gamma_decompressed, save_file_address)
+    print("Gamma Restored Index Saved Successfully!")
+
+    vl_compressed = PositionalIndexer(docs, ngram)
+    vl_compressed.index = compress_index(vl_compressed.index, False)
+    save_file_address = "../data/saved_" + ("en" if language == "1" else "fa") + "_" + str(ngram) + "_vl.dat"
+    save_index(vl_compressed, save_file_address)
+    print("VL Compressed Index Saved Successfully!")
+
+    vl_decompressed = load_index(save_file_address)
+    vl_decompressed.index = decompress_index(vl_decompressed.index, False)
+    save_file_address = "../data/saved_" + ("en" if language == "1" else "fa") + "_" + str(
+        ngram) + "_vl_restored.dat"
+    save_index(vl_decompressed, save_file_address)
+    print("VL Restored Index Saved Successfully!")
+
+
