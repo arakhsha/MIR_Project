@@ -29,6 +29,7 @@ class Preprocessor:
         for doc in docs:
             fulltext += doc.text
         tokens = self.remove_punctuation(self.tokenize(self.normalize(fulltext)))
+        tokens = self.filter_tokens(tokens)
         ft = frequency_table(tokens)
         return ft, len(tokens)
 
@@ -132,6 +133,12 @@ class PersianPreprocessor(Preprocessor):
             if len(new_word) > 0:
                 new_words.append(new_word)
         return new_words
+
+    def filter_tokens(self, tokens, min_size=0, special_chars=False):
+        tokens = super().filter_tokens(tokens, min_size, special_chars)
+        tokens = [t for t in tokens if re.search('[a-zA-Z-]', t) is None]
+        return tokens
+
 
     def __init__(self, filename):
         super().__init__(filename, Stemmer())
