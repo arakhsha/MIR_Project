@@ -20,7 +20,11 @@ def extract_csv(filename):
     df = pd.read_csv(filename)
     for i in range(df.shape[0]):
         text = df['Title'].values[i] + " " + df['Text'].values[i]
-        docs[i] = Doc(i, text)
+        if "Tag" in df.columns:
+            tag = df['Tag'].values[i]
+        else
+            tag = None
+        docs[i] = Doc(i, text, tag)
     return docs
 
 
