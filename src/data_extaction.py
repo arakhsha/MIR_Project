@@ -22,7 +22,7 @@ def extract_csv(filename):
         text = df['Title'].values[i] + " " + df['Text'].values[i]
         if "Tag" in df.columns:
             tag = df['Tag'].values[i]
-        else
+        else:
             tag = None
         docs[i] = Doc(i, text, tag)
     return docs
@@ -36,6 +36,6 @@ def read_docs(filename):
 
 if __name__ == "__main__":
     # docs = read_docs("../data/Persian.xml")
-    docs = read_docs("../data/English.csv")
+    docs = read_docs("../data/phase2_train.csv")
 
-    print(docs[0].id, docs[0].text)
+    print(docs[0].tag, docs[0].id, docs[0].text)
