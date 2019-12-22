@@ -9,8 +9,8 @@ from preprocess import EnglishPreprocessor, PersianPreprocessor
 def calc_tfidf(doc, index, total_doc_count, method):
     v = {}
     for word in doc.words:
+        t_count = len([x for x in doc.words if x == word])
         if method[0] == "l":
-            t_count = len([x for x in doc.words if x == word])
             tf = log(t_count + 1)
         elif method[0] == "n":
             tf = t_count
@@ -20,7 +20,8 @@ def calc_tfidf(doc, index, total_doc_count, method):
         if method[1] == "n":
             idf = 1
         elif method[1] == "t":
-            idf = log(total_doc_count / len(index[word].postings))
+            doc_freq = 1 if word not in index else len(index[word].postings) + 1
+            idf = log(total_doc_count / doc_freq)
         else:
             print("Not Supported tf-idf Method!")
 

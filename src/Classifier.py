@@ -1,9 +1,11 @@
+import random
 from abc import abstractmethod
 from math import log
 
 from data_extaction import read_docs
 from positional_indexing import PositionalIndexer
 from preprocess import EnglishPreprocessor
+from query import calc_tfidf
 
 
 class Classifier:
@@ -61,11 +63,34 @@ class NBClassifier(Classifier):
 
 class KNNClassifier(Classifier):
 
+    def calc_dist(self, v1, v2):
+        dist = sum([(v1[x] - v2[x])**2 for x in v1.keys() & v2.keys()])
+        dist += sum([v1[x]**2 for x in v1.keys() - v2.keys()])
+        dist += sum([v2[x]**2 for x in v2.keys() - v1.keys()])
+        return dist
+
+    def set_k(self, k):
+        self.k = k
+
     def train(self, docs, index):
-        pass
+        self.docs = docs
+        self.index = index
 
     def classify(self, docs):
-        pass
+        results = {}
+        for doc in docs.values():
+            v_doc = calc_tfidf(doc, self.index, len(self.docs), "ntn")
+            knn = []
+            for train_doc in self.docs.values():
+                v_train_doc = calc_tfidf(train_doc, self.index, len(self.docs), "ntn")
+                knn.append((train_doc, self.calc_dist(v_doc, v_train_doc)))
+            knn.sort(key=lambda x: x[1])
+            knn_tags = [x[0].tag for x in knn[0:self.k]]
+            results[doc.id] = max(set(knn_tags), key = knn_tags.count)
+        return results
+
+    def __init__(self, k):
+        self.k = k
 
 
 class SVMClassifier(Classifier):
@@ -103,11 +128,17 @@ if __name__ == "__main__":
     print("Index Created Successfully!")
 
 
-    classifier = NBClassifier()
-    classifier.train(train_docs, index)
-    results = classifier.classify(test_docs)
+    # classifier = NBClassifier()
+    classifier = KNNClassifier(5)
 
-    for i in range(20):
+    sampled = {}
+    for i in random.sample(train_docs.keys(), 500):
+        sampled[i] = train_docs[i]
+    classifier.train(sampled, index)
+    results = classifier.classify({0: test_docs[0]})
+
+
+    for i in list(results.keys())[0:1]:
         print("Predicted Tag:", results[i])
         print("Text:", test_docs[i].text)
 
