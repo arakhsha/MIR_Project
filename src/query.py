@@ -41,7 +41,7 @@ def search(q_doc, docs, index, result_count):
     results = []
     vq = calc_tfidf(q_doc, index, len(docs), "ltc")
     for doc in docs.values():
-        vd = calc_tfidf(doc, index, len(docs), "ltc")
+        vd = calc_tfidf(doc, index, len(docs), "lnc")
         diff = calc_diff(vq, vd)
         results.append((doc, diff))
     results.sort(key=lambda tup: -tup[1])
