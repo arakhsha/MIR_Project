@@ -12,14 +12,17 @@ def calc_tfidf(doc, index, total_doc_count, method):
         if method[0] == "l":
             t_count = len([x for x in doc.words if x == word])
             tf = log(t_count + 1)
+        elif method[0] == "n":
+            tf = t_count
         else:
             print("Not Supported tf-idf Method!")
 
         if method[1] == "n":
             idf = 1
-
-        if method[1] == "t":
+        elif method[1] == "t":
             idf = log(total_doc_count / len(index[word].postings))
+        else:
+            print("Not Supported tf-idf Method!")
 
         v[word] = tf * idf
 
