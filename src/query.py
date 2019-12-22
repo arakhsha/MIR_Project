@@ -25,9 +25,23 @@ def calc_tfidf(doc, index, total_doc_count, method):
 
     return v
 
+def calc_diff(v1, v2):
+    diff = 0
+    for term in v1.keys().intersection(v2.keys()):
+        diff += v1[term] * v2[term]
+    return diff
 
-def search(query, docs, index):
-    pass
+
+def search(q_doc, docs, index, result_count):
+    results = []
+    vq = calc_tfidf(q_doc, index, len(docs), "ltc")
+    for doc in docs:
+        vd = calc_tfidf(doc, index, len(docs), "ltc")
+        diff = calc_diff(vq, vd)
+        results.append((doc, diff))
+    results.sort(key=lambda tup: tup[1])
+    return results[0:result_count]
+
 
 
 
