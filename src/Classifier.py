@@ -2,10 +2,15 @@ import random
 from abc import abstractmethod
 from math import log
 
+import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+
 from data_extaction import read_docs
 from positional_indexing import PositionalIndexer
 from preprocess import EnglishPreprocessor
 from query import calc_tfidf
+
+from sklearn import svm
 
 
 class Classifier:
@@ -83,6 +88,7 @@ class KNNClassifier(Classifier):
             knn = []
             for train_doc in self.docs.values():
                 v_train_doc = calc_tfidf(train_doc, self.index, len(self.docs), "ntn")
+                print(v_train_doc)
                 knn.append((train_doc, self.calc_dist(v_doc, v_train_doc)))
             knn.sort(key=lambda x: x[1])
             knn_tags = [x[0].tag for x in knn[0:self.k]]
@@ -95,8 +101,30 @@ class KNNClassifier(Classifier):
 
 class SVMClassifier(Classifier):
 
-    def train(self, docs, index):
-        pass
+    def train(self, docs, index, C=1.0):
+        size = len(docs.values())
+        train_size = int(0.9*size)
+        t_docs = docs.values()
+        train_docs = t_docs[:train_size]
+        validation_docs = t_docs[train_size:]
+
+        cv = CountVectorizer()
+        word_count_vector = cv.fit_transform([doc.text for doc in train_docs])
+
+        tfidf_transformer = TfidfTransformer(smooth_idf=True, use_idf=True)
+        tfidf_transformer.fit(word_count_vector)
+
+        # print idf values
+        df_idf = pd.DataFrame(tfidf_transformer.idf_, index=cv.get_feature_names(), columns=["idf_weights"])
+
+        # sort ascending
+        df_idf.sort_values(by=['idf_weights'])
+
+        # count matrix
+        count_vector = cv.transform(docs)
+
+        # tf-idf scores
+        tf_idf_vector = tfidf_transformer.transform(count_vector)
 
     def classify(self, docs):
         pass
