@@ -1,14 +1,15 @@
 import random
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from math import log
 
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 
 from data_extaction import read_docs
 from positional_indexing import PositionalIndexer
 from preprocess import EnglishPreprocessor
-from query import calc_tfidf
+from query import calc_tfidf, tfidf_matrix
 
 from sklearn import svm
 
@@ -16,46 +17,44 @@ from sklearn import svm
 class Classifier:
 
     @abstractmethod
-    def train(self, docs, index):
+    def train(self):
         pass
 
     @abstractmethod
-    def classify(self, docs):
+    def classify(self, query_docs):
         pass
+
+    def __init__(self, train_docs, train_index):
+        self.train_docs = train_docs
+        self.train_index = train_index
 
 
 class NBClassifier(Classifier):
 
-    def train(self, docs, index):
-        self.docs = docs
-        self.index = index
-        self.tag_wordcount = {}
-        self.tag_doccount = {}
-        for doc in docs.values():
+    def train(self):
+        for doc in train_docs.values():
             tag = doc.tag
-            if tag not in self.tag_doccount:
-                self.tag_doccount[tag] = 0
-            if tag not in self.tag_wordcount:
-                self.tag_wordcount[tag] = 0
-            self.tag_wordcount[tag] += len(doc.words)
-            self.tag_doccount[tag] += 1
-        self.prior = {}
-        for tag in self.tag_doccount:
-            self.prior[tag] = log(self.tag_doccount[tag] / len(docs.keys()))
+            if tag not in self.tag_doc_count:
+                self.tag_doc_count[tag] = 0
+            if tag not in self.tag_word_count:
+                self.tag_word_count[tag] = 0
+            self.tag_word_count[tag] += len(doc.words)
+            self.tag_doc_count[tag] += 1
+        for tag in self.tag_doc_count:
+            self.prior[tag] = log(self.tag_doc_count[tag] / len(train_docs.keys()))
 
     def calc_score(self, tag, term):
-        term_tagcount = 0
-        if term in self.index:
-            for posting in self.index[term].postings:
-                if self.docs[posting.doc_id].tag == tag:
-                    term_tagcount += len(posting.positions)
-            return log((term_tagcount + 1) / (self.tag_wordcount[tag] + len(index.keys())))
-        return log(1 / (self.tag_wordcount[tag] + len(index.keys()) + 1))
+        term_tag_count = 0
+        if term in self.train_index:
+            for posting in self.train_index[term].postings:
+                if self.train_docs[posting.doc_id].tag == tag:
+                    term_tag_count += len(posting.positions)
+            return log((term_tag_count + 1) / (self.tag_word_count[tag] + len(index.keys())))
+        return log(1 / (self.tag_word_count[tag] + len(index.keys()) + 1))
 
-
-    def classify(self, docs):
+    def classify(self, query_docs):
         results = {}
-        for doc in docs.values():
+        for doc in query_docs.values():
             scores = []
             for tag in self.prior:
                 score = self.prior[tag]
@@ -65,78 +64,78 @@ class NBClassifier(Classifier):
             results[doc.id] = sorted(scores, key=lambda x: -x[1])[0][0]
         return results
 
+    def __init__(self, train_docs, train_index):
+        super().__init__(train_docs, train_index)
+        self.tag_word_count = {}
+        self.tag_doc_count = {}
+        self.prior = {}
+
 
 class KNNClassifier(Classifier):
 
     def calc_dist(self, v1, v2):
-        dist = sum([(v1[x] - v2[x])**2 for x in v1.keys() & v2.keys()])
-        dist += sum([v1[x]**2 for x in v1.keys() - v2.keys()])
-        dist += sum([v2[x]**2 for x in v2.keys() - v1.keys()])
+        dist = sum([(v1[x] - v2[x]) ** 2 for x in v1.keys() & v2.keys()])
+        dist += sum([v1[x] ** 2 for x in v1.keys() - v2.keys()])
+        dist += sum([v2[x] ** 2 for x in v2.keys() - v1.keys()])
         return dist
 
     def set_k(self, k):
         self.k = k
 
-    def train(self, docs, index):
-        self.docs = docs
-        self.index = index
+    def train(self):
+        pass
 
-    def classify(self, docs):
+    def classify(self, query_docs):
         results = {}
-        for doc in docs.values():
-            v_doc = calc_tfidf(doc, self.index, len(self.docs), "ntn")
+        for doc in query_docs.values():
+            v_doc = calc_tfidf(doc, self.train_index, len(self.train_docs), "ntn")
             knn = []
-            for train_doc in self.docs.values():
-                v_train_doc = calc_tfidf(train_doc, self.index, len(self.docs), "ntn")
+            for train_doc in self.train_docs.values():
+                v_train_doc = calc_tfidf(train_doc, self.train_index, len(self.train_docs), "ntn")
                 print(v_train_doc)
                 knn.append((train_doc, self.calc_dist(v_doc, v_train_doc)))
             knn.sort(key=lambda x: x[1])
             knn_tags = [x[0].tag for x in knn[0:self.k]]
-            results[doc.id] = max(set(knn_tags), key = knn_tags.count)
+            results[doc.id] = max(set(knn_tags), key=knn_tags.count)
         return results
 
-    def __init__(self, k):
+    def __init__(self, train_docs, train_index, k=3):
+        super().__init__(train_docs, train_index)
         self.k = k
 
 
-class SVMClassifier(Classifier):
+class SKLearnClassifier(Classifier):
 
-    def train(self, docs, index, C=1.0):
-        size = len(docs.values())
-        train_size = int(0.9*size)
-        t_docs = docs.values()
-        train_docs = t_docs[:train_size]
-        validation_docs = t_docs[train_size:]
+    def train(self):
+        self.clf.fit(X=tfidf_matrix(docs=self.train_docs, index=self.train_index,
+                                    total_doc_count=len(self.train_docs), method="ntn"),
+                     y=[doc.tag for doc in self.train_docs.values()])
 
-        cv = CountVectorizer()
-        word_count_vector = cv.fit_transform([doc.text for doc in train_docs])
+    def classify(self, query_docs):
+        return self.clf.predict(X=tfidf_matrix(docs=query_docs, index=self.train_index,
+                                               total_doc_count=len(query_docs), method="ntn"))
 
-        tfidf_transformer = TfidfTransformer(smooth_idf=True, use_idf=True)
-        tfidf_transformer.fit(word_count_vector)
-
-        # print idf values
-        df_idf = pd.DataFrame(tfidf_transformer.idf_, index=cv.get_feature_names(), columns=["idf_weights"])
-
-        # sort ascending
-        df_idf.sort_values(by=['idf_weights'])
-
-        # count matrix
-        count_vector = cv.transform(docs)
-
-        # tf-idf scores
-        tf_idf_vector = tfidf_transformer.transform(count_vector)
-
-    def classify(self, docs):
-        pass
+    def __init__(self, train_docs, train_index):
+        super().__init__(train_docs, train_index)
+        self.clf = None
 
 
-class RFClassifier(Classifier):
+class SVMClassifier(SKLearnClassifier):
 
-    def train(self, docs, index):
-        pass
+    def set_C(self, C):
+        self.C = C
+        self.clf = svm.SVC(C=self.C)
 
-    def classify(self, docs):
-        pass
+    def __init__(self, train_docs, train_index, C=1):
+        super().__init__(train_docs, train_index)
+        self.C = C
+        self.clf = svm.SVC()
+
+
+class RFClassifier(SKLearnClassifier):
+    def __init__(self, train_docs, train_index):
+        super().__init__(train_docs, train_index)
+        self.clf = RandomForestClassifier(n_estimators=100)
 
 
 if __name__ == "__main__":
@@ -155,18 +154,15 @@ if __name__ == "__main__":
     index = PositionalIndexer(train_docs, 1).index
     print("Index Created Successfully!")
 
-
-    # classifier = NBClassifier()
-    classifier = KNNClassifier(5)
-
     sampled = {}
     for i in random.sample(train_docs.keys(), 500):
         sampled[i] = train_docs[i]
-    classifier.train(sampled, index)
-    results = classifier.classify({0: test_docs[0]})
 
+    # classifier = NBClassifier()
+    classifier = KNNClassifier(sampled, index, 5)
+    classifier.train()
+    results = classifier.classify({0: test_docs[0]})
 
     for i in list(results.keys())[0:1]:
         print("Predicted Tag:", results[i])
         print("Text:", test_docs[i].text)
-

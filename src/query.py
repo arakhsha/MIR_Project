@@ -28,11 +28,19 @@ def calc_tfidf(doc, index, total_doc_count, method):
         v[word] = tf * idf
 
     if method[2] == "c":
-        normalizer = sqrt(sum([x**2 for x in v.values()]))
+        normalizer = sqrt(sum([x ** 2 for x in v.values()]))
         for word in v.keys():
             v[word] /= normalizer
 
     return v
+
+
+def tfidf_matrix(docs, index, total_doc_count, method):
+    result = []
+    for doc in docs.values():
+        result.append(calc_tfidf(doc, index, total_doc_count, method))
+    return result
+
 
 def calc_diff(v1, v2):
     diff = 0
