@@ -1,5 +1,7 @@
 from math import log, sqrt
 
+import pandas
+
 from Doc import Doc
 from data_extaction import read_docs
 from positional_indexing import PositionalIndexer
@@ -37,10 +39,13 @@ def calc_tfidf(doc, index, total_doc_count, method):
 
 
 def tfidf_matrix(docs, index, total_doc_count, method):
-    result = []
-    for doc in docs.values():
-        result.append(calc_tfidf(doc, index, total_doc_count, method))
-    return result
+    result = {}
+    for key in docs:
+        doc = docs[key]
+        result[key] = calc_tfidf(doc, index, total_doc_count, method)
+        print(str(key)+str(result[key]))
+
+    return pandas.DataFrame(result).transpose()
 
 
 def calc_diff(v1, v2):
