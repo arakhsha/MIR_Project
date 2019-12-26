@@ -1,3 +1,5 @@
+import heapq
+from collections import Counter
 from math import log, sqrt
 
 import pandas
@@ -8,11 +10,31 @@ from positional_indexing import PositionalIndexer
 from preprocess import EnglishPreprocessor, PersianPreprocessor
 
 
-def calc_tfidf(doc, index, total_doc_count, method):
+def index_to_length(index):
+    result = {}
+    for word in index:
+        result[word] = 0
+        for posting in index[word].postings:
+            result[word] = result[word] + len(posting.positions)
+
+    return result
+
+
+def slice_index(index, n=500):
+    lengths = index_to_length(index)
+    d = Counter(lengths)
+
+    result = {}
+    for word, count in d.most_common(n):
+        result[word] = index[word]
+    return result
+
+
+def calc_tfidf(doc, index, total_doc_count, method, include_tf_zero=True):
     v = {}
-    for word in doc.words:
-        if word in index:
-            t_count = len([x for x in doc.words if x == word])
+    for word in index:
+        t_count = len([x for x in doc.words if x == word])
+        if include_tf_zero or t_count > 0:
             if method[0] == "l":
                 tf = log(t_count + 1)
             elif method[0] == "n":
@@ -28,7 +50,7 @@ def calc_tfidf(doc, index, total_doc_count, method):
             else:
                 print("Not Supported tf-idf Method!")
 
-        v[word] = tf * idf
+            v[word] = tf * idf
 
     if method[2] == "c":
         normalizer = sqrt(sum([x ** 2 for x in v.values()]))
@@ -43,9 +65,10 @@ def tfidf_matrix(docs, index, total_doc_count, method):
     for key in docs:
         doc = docs[key]
         result[key] = calc_tfidf(doc, index, total_doc_count, method)
-        print(str(key)+str(result[key]))
+    df = pandas.DataFrame(result).fillna(0).transpose()
 
-    return pandas.DataFrame(result).transpose()
+    df = df.reindex(sorted(df.columns), axis=1)
+    return df
 
 
 def calc_diff(v1, v2):

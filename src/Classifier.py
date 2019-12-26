@@ -11,7 +11,7 @@ from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 from data_extaction import read_docs
 from positional_indexing import PositionalIndexer
 from preprocess import EnglishPreprocessor
-from query import calc_tfidf, tfidf_matrix
+from query import calc_tfidf, tfidf_matrix, slice_index
 
 from sklearn import svm
 
@@ -55,7 +55,7 @@ class NBClassifier(Classifier):
         return log(1 / (self.tag_word_count[tag] + len(index.keys()) + 1))
 
     def classify(self, query_docs):
-        results = {}
+        results = []
         for doc in query_docs.values():
             scores = []
             for tag in self.prior:
@@ -63,7 +63,7 @@ class NBClassifier(Classifier):
                 for word in doc.words:
                     score += self.calc_score(tag, word)
                 scores.append((tag, score))
-            results[doc.id] = sorted(scores, key=lambda x: -x[1])[0][0]
+            results.append(sorted(scores, key=lambda x: -x[1])[0][0])
         return results
 
     def __init__(self, train_docs, train_index):
@@ -81,24 +81,23 @@ class KNNClassifier(Classifier):
         dist += sum([v2[x] ** 2 for x in v2.keys() - v1.keys()])
         return dist
 
-    def set_k(self, k):
+    def set_param(self, k):
         self.k = k
 
     def train(self):
         pass
 
     def classify(self, query_docs):
-        results = {}
+        results = []
         for doc in query_docs.values():
-            v_doc = calc_tfidf(doc, self.train_index, len(self.train_docs), "ntn")
+            v_doc = calc_tfidf(doc, self.train_index, len(self.train_docs), "ntn", False)
             knn = []
             for train_doc in self.train_docs.values():
-                v_train_doc = calc_tfidf(train_doc, self.train_index, len(self.train_docs), "ntn")
-                print(v_train_doc)
+                v_train_doc = calc_tfidf(train_doc, self.train_index, len(self.train_docs), "ntn", False)
                 knn.append((train_doc, self.calc_dist(v_doc, v_train_doc)))
             knn.sort(key=lambda x: x[1])
             knn_tags = [x[0].tag for x in knn[0:self.k]]
-            results[doc.id] = max(set(knn_tags), key=knn_tags.count)
+            results.append(max(set(knn_tags), key=knn_tags.count))
         return results
 
     def __init__(self, train_docs, train_index, k=3):
@@ -110,15 +109,15 @@ class KNNClassifier(Classifier):
         maximum_precision = -1.0
         arg_max_param = None
         validation_true = [doc.tag for doc in validation_data.values()]
-        for i in range(len(possible_parameters)):
-            current_param = possible_parameters[i]
-            classifier = KNNClassifier(train_data, train_index, current_param)
+        classifier = KNNClassifier(train_data, train_index)
+        for current_param in possible_parameters:
+            classifier.set_param(current_param)
             classifier.train()
             validation_pred = classifier.classify(validation_data)
             precision = precision_recall_fscore_support(y_true=validation_true,
                                                         y_pred=validation_pred,
                                                         average='macro')[0]
-
+            print(str(current_param)+":\t"+str(precision))
             if maximum_precision < precision:
                 arg_max_param = current_param
                 maximum_precision = precision
@@ -130,9 +129,6 @@ class KNNClassifier(Classifier):
 class SKLearnClassifier(Classifier):
 
     def train(self):
-        print(tfidf_matrix(docs=self.train_docs, index=self.train_index,
-                                    total_doc_count=len(self.train_docs), method="ntn"))
-        print([doc.tag for doc in self.train_docs.values()])
         self.clf.fit(X=tfidf_matrix(docs=self.train_docs, index=self.train_index,
                                     total_doc_count=len(self.train_docs), method="ntn"),
                      y=[doc.tag for doc in self.train_docs.values()])
@@ -148,7 +144,7 @@ class SKLearnClassifier(Classifier):
 
 class SVMClassifier(SKLearnClassifier):
 
-    def set_C(self, C):
+    def set_param(self, C):
         self.C = C
         self.clf = svm.SVC(C=self.C)
 
@@ -162,15 +158,15 @@ class SVMClassifier(SKLearnClassifier):
         maximum_precision = -1.0
         arg_max_param = None
         validation_true = [doc.tag for doc in validation_data.values()]
-        for i in range(len(possible_parameters)):
-            current_param = possible_parameters[i]
-            classifier = SVMClassifier(train_data, train_index, current_param)
+        classifier = SVMClassifier(train_data, train_index)
+        for current_param in possible_parameters:
+            classifier.set_param(current_param)
             classifier.train()
             validation_pred = classifier.classify(validation_data)
             precision = precision_recall_fscore_support(y_true=validation_true,
                                                         y_pred=validation_pred,
                                                         average='macro')[0]
-
+            print(str(current_param)+":\t"+str(precision))
             if maximum_precision < precision:
                 arg_max_param = current_param
                 maximum_precision = precision
@@ -181,7 +177,7 @@ class SVMClassifier(SKLearnClassifier):
 class RFClassifier(SKLearnClassifier):
     def __init__(self, train_docs, train_index):
         super().__init__(train_docs, train_index)
-        self.clf = RandomForestClassifier(n_estimators=100)
+        self.clf = RandomForestClassifier(n_estimators=10)
 
 
 if __name__ == "__main__":
@@ -200,6 +196,8 @@ if __name__ == "__main__":
     index = PositionalIndexer(train_docs, 1).index
     print("Index Created Successfully!")
 
+    index = slice_index(index=index, n=200)
+
     sampled = {}
     sample_size = 500
     for i in random.sample(train_docs.keys(), sample_size):
@@ -207,38 +205,38 @@ if __name__ == "__main__":
 
     # classifier = NBClassifier()
 
-    print(sampled)
+    #print(sampled)
+    while True:
+        method_name = input("Select classifier: 1. Naive Bayes 2. k-NN 3. SVM 4. Random Forest 5.exit")
+        classifier = None
+        if method_name == "1":
+            train_docs = sampled
+            classifier = NBClassifier(train_docs, index)
+        elif method_name == "2":
+            train_size = int(0.9*sample_size)
+            train_docs, validation_docs = (dict(list(sampled.items())[:train_size]),
+                                           dict(list(sampled.items())[train_size:]))
+            parameter = KNNClassifier.find_best_parameter(train_docs, index, validation_docs, [1, 5, 9])
+            print("Best parameter is:"+str(parameter))
+            classifier = KNNClassifier(sampled, index, parameter)
+        elif method_name == "3":
+            train_size = int(0.9*sample_size)
+            train_docs, validation_docs = (dict(list(sampled.items())[:train_size]),
+                                           dict(list(sampled.items())[train_size:]))
+            parameter = SVMClassifier.find_best_parameter(train_docs, index, validation_docs, [0.5, 1, 1.5, 2])
+            print("Best parameter is:" + str(parameter))
+            classifier = SVMClassifier(train_docs, index, parameter)
+        elif method_name == "4":
+            train_docs = sampled
+            classifier = RFClassifier(train_docs, index)
+        elif method_name == "5":
+            exit()
+        else:
+            print("does not exist")
 
-    method_name = input("Select classifier: 1. Naive Bayes 2. k-NN 3. SVM 4. Random Forest")
-    classifier = None
-    if method_name == "1":
-        train_docs = sampled
-        classifier = NBClassifier(train_docs, index)
-    elif method_name == "2":
-        train_size = int(0.9*sample_size)
-        train_docs, validation_docs = (dict(list(sampled.items())[:train_size]),
-                                       dict(list(sampled.items())[train_size:]))
-        parameter = KNNClassifier.find_best_parameter(train_docs, index, validation_docs, [1, 5, 9])
-        print("Best parameter is:"+str(parameter))
-        classifier = KNNClassifier(sampled, index, parameter)
-    elif method_name == "3":
-        train_size = int(0.9*sample_size)
-        train_docs, validation_docs = (dict(list(sampled.items())[:train_size]),
-                                       dict(list(sampled.items())[train_size:]))
-        print(train_docs)
-        print(validation_docs)
-        parameter = SVMClassifier.find_best_parameter(train_docs, index, validation_docs, [0.5, 1, 1.5, 2])
-        print("Best parameter is:" + str(parameter))
-        classifier = SVMClassifier(train_docs, index, parameter)
-    elif method_name == "4":
-        train_docs = sampled
-        classifier = RFClassifier(train_docs, index)
-    else:
-        print("does not exist")
-        exit()
-
-    classifier.train()
-    y_pred = classifier.classify(train_docs)
-    y_true = [doc.tag for doc in train_docs]
-    print(confusion_matrix(y_true=y_true, y_pred=y_pred))
+        if classifier is not None:
+            classifier.train()
+            y_pred = classifier.classify(train_docs)
+            y_true = [doc.tag for doc in train_docs.values()]
+            print(confusion_matrix(y_true=y_true, y_pred=y_pred))
 
