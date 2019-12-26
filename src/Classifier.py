@@ -1,3 +1,4 @@
+import heapq
 import random
 from abc import abstractmethod
 from collections import Counter
@@ -38,9 +39,31 @@ def slice_index(index, n=500):
 
 def calc_tfidf(doc, index, index_doc_count, method, include_tf_zero=True):
     v = {}
-    for word in index:
-        t_count = len([x for x in doc.words if x == word])
-        if include_tf_zero or t_count > 0:
+    if include_tf_zero:
+        for word in index:
+            if word in doc.words:
+                t_count = len([x for x in doc.words if x == word])
+                if method[0] == "l":
+                    tf = log(t_count + 1)
+                elif method[0] == "n":
+                    tf = t_count
+                else:
+                    print("Not Supported tf-idf Method!")
+
+                if method[1] == "n":
+                    idf = 1
+                elif method[1] == "t":
+                    doc_freq = 1 if word not in index else len(index[word].postings) + 1
+                    idf = log(index_doc_count / doc_freq)
+                else:
+                    print("Not Supported tf-idf Method!")
+
+                v[word] = tf * idf
+            else:
+                v[word] = 0
+    else:
+        for word in set(doc.words).intersection(index):
+            t_count = len([x for x in doc.words if x == word])
             if method[0] == "l":
                 tf = log(t_count + 1)
             elif method[0] == "n":
@@ -136,13 +159,6 @@ class NBClassifier(Classifier):
 
 
 class KNNClassifier(Classifier):
-
-    def calc_dist(self, v1, v2):
-        dist = sum([(v1[x] - v2[x]) ** 2 for x in v1.keys() & v2.keys()])
-        dist += sum([v1[x] ** 2 for x in v1.keys() - v2.keys()])
-        dist += sum([v2[x] ** 2 for x in v2.keys() - v1.keys()])
-        return dist
-
     def set_param(self, k):
         self.k = k
 
@@ -154,25 +170,18 @@ class KNNClassifier(Classifier):
         pass
 
     def top_k(self, knn):
-        d = Counter(knn)
-
-        result = []
-        for doc, _ in d.most_common(self.k):
-            result.append(doc)
-        return result
+        return [x[1][0] for x in heapq.nlargest(self.k, enumerate(knn), key=lambda elem: elem[1][1])]
 
     def classify(self, query_docs):
         results = []
-        query_tf_idf_matrix = tfidf_matrix(docs=query_docs,
-                                           index=self.train_index,
-                                           index_doc_count=self.index_doc_count,
-                                           method="ntn")
-        for query_doc, query_doc_row in query_tf_idf_matrix.iterrows():
-            query_doc_vector = numpy.array(list(query_doc_row))
-            knn = {}
-            for train_doc, train_doc_row in self.train_tf_idf_matrix.iterrows():
+        for query_doc in query_docs.values():
+            query_doc_tf_idf_dict = calc_tfidf(query_doc, self.train_index, self.index_doc_count, "ntn", False)
+            current_tf_idf_matrix = self.train_tf_idf_matrix[query_doc_tf_idf_dict.keys()]
+            query_doc_vector = numpy.array(list(query_doc_tf_idf_dict.values()))
+            knn = []
+            for train_doc, train_doc_row in current_tf_idf_matrix.iterrows():
                 train_doc_vector = numpy.array(list(train_doc_row))
-                knn[train_doc] = -numpy.linalg.norm(query_doc_vector - train_doc_vector)
+                knn.append((train_doc, -numpy.linalg.norm(query_doc_vector - train_doc_vector)))
 
             knn_tags = [self.train_docs[x].tag for x in self.top_k(knn)]
             results.append(max(set(knn_tags), key=knn_tags.count))
@@ -281,7 +290,7 @@ if __name__ == "__main__":
             classifier = NBClassifier(train_docs, sliced_index, index_doc_count)
         elif method_name == "2":
             sampled = {}
-            sample_size = 1000
+            sample_size = 2000
             for i in random.sample(train_docs.keys(), sample_size):
                 sampled[i] = train_docs[i]
             train_size = int(0.9 * sample_size)
@@ -318,8 +327,7 @@ if __name__ == "__main__":
             y_true = [doc.tag for doc in test_docs.values()]
             print("Confusion Matrix:")
             print(confusion_matrix(y_true=y_true, y_pred=y_pred))
-            print("Accuracy:\t"+str(accuracy_score(y_true=y_true, y_pred=y_pred)))
-            print("F1 Scores:\t"+str(f1_score(y_true=y_true, y_pred=y_pred, average=None)))
-            print("Precision Scores:\t"+str(precision_score(y_true, y_pred, average=None)))
-            print("Recall Scores:\t"+str(recall_score(y_true, y_pred, average=None)))
-
+            print("Accuracy:\t" + str(accuracy_score(y_true=y_true, y_pred=y_pred)))
+            print("F1 Scores:\t" + str(f1_score(y_true=y_true, y_pred=y_pred, average=None)))
+            print("Precision Scores:\t" + str(precision_score(y_true, y_pred, average=None)))
+            print("Recall Scores:\t" + str(recall_score(y_true, y_pred, average=None)))
