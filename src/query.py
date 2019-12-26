@@ -1,6 +1,8 @@
 import heapq
 from collections import Counter
 from math import log, sqrt
+import random
+
 
 import pandas
 
@@ -9,67 +11,36 @@ from data_extaction import read_docs
 from positional_indexing import PositionalIndexer
 from preprocess import EnglishPreprocessor, PersianPreprocessor
 
-
-def index_to_length(index):
-    result = {}
-    for word in index:
-        result[word] = 0
-        for posting in index[word].postings:
-            result[word] = result[word] + len(posting.positions)
-
-    return result
+from Classifier import RFClassifier, calc_tfidf, slice_index
 
 
-def slice_index(index, n=500):
-    lengths = index_to_length(index)
-    d = Counter(lengths)
+def classify(docs):
+    print("Classifying...")
+    print("Preprocessing Train Data...")
+    train_docs = read_docs('../data/phase2_train.csv')
+    preprocessor = EnglishPreprocessor(train_docs)
+    for doc in train_docs.values():
+        doc.words = preprocessor.preprocess(doc.text)
+    print("Indexing Train Data...")
+    index = PositionalIndexer(train_docs, 1).index
+    sliced_index = slice_index(index=index, n=200)
+    sampled = {}
+    sample_size = 500
+    for i in random.sample(train_docs.keys(), sample_size):
+        sampled[i] = train_docs[i]
+    train_docs = sampled
+    classifier = RFClassifier(train_docs, sliced_index)
+    classifier.train()
+    y_pred = classifier.classify(docs)
+    doc_ids = [doc.id for doc in docs.values()]
+    for i in range(len(doc_ids)):
+        docs[doc_ids[i]].tag = y_pred[i]
 
-    result = {}
-    for word, count in d.most_common(n):
-        result[word] = index[word]
-    return result
-
-
-def calc_tfidf(doc, index, total_doc_count, method, include_tf_zero=True):
-    v = {}
-    for word in index:
-        t_count = len([x for x in doc.words if x == word])
-        if include_tf_zero or t_count > 0:
-            if method[0] == "l":
-                tf = log(t_count + 1)
-            elif method[0] == "n":
-                tf = t_count
-            else:
-                print("Not Supported tf-idf Method!")
-
-            if method[1] == "n":
-                idf = 1
-            elif method[1] == "t":
-                doc_freq = 1 if word not in index else len(index[word].postings) + 1
-                idf = log(total_doc_count / doc_freq)
-            else:
-                print("Not Supported tf-idf Method!")
-
-            v[word] = tf * idf
-
-    if method[2] == "c":
-        normalizer = sqrt(sum([x ** 2 for x in v.values()]))
-        for word in v.keys():
-            v[word] /= normalizer
-
-    return v
-
-
-def tfidf_matrix(docs, index, total_doc_count, method):
-    result = {}
-    for key in docs:
-        doc = docs[key]
-        result[key] = calc_tfidf(doc, index, total_doc_count, method)
-    df = pandas.DataFrame(result).fillna(0).transpose()
-
-    df = df.reindex(sorted(df.columns), axis=1)
-    return df
-
+    # for i in range(10):
+    #     doc = docs[doc_ids[i]]
+    #     print(doc.id)
+    #     print(doc.tag)
+    #     print(doc.text)
 
 def calc_diff(v1, v2):
     diff = 0
@@ -78,10 +49,13 @@ def calc_diff(v1, v2):
     return diff
 
 
-def search(q_doc, docs, index, result_count):
+def search(q_doc, docs, index, result_count, tag=None):
     results = []
     vq = calc_tfidf(q_doc, index, len(docs), "ltc")
     for doc in docs.values():
+        if tag is not None:
+            if str(doc.tag) != str(tag):
+                continue
         vd = calc_tfidf(doc, index, len(docs), "lnc")
         diff = calc_diff(vq, vd)
         results.append((doc, diff))
@@ -111,7 +85,15 @@ if __name__ == "__main__":
     q_doc = Doc(0, query)
     q_doc.words = preprocessor.preprocess(q_doc.text)
 
-    results = search(q_doc, docs, index, 10)
+    query_tag = input("Enter Tag (1, 2, 3, 4, None): ")
+    tag = None
+    if query_tag in ["1", "2", "3", "4"]:
+        tag = int(query_tag)
+
+    if tag is not None:
+        classify(docs)
+
+    results = search(q_doc, docs, index, 10, query_tag)
     for result in results:
         print(result[1])
         print(result[0].text)
