@@ -30,7 +30,7 @@ def slice_index(index, n=500):
     return result
 
 
-def calc_tfidf(doc, index, total_doc_count, method, include_tf_zero=True):
+def calc_tfidf(doc, index, index_doc_count, method, include_tf_zero=True):
     v = {}
     for word in index:
         t_count = len([x for x in doc.words if x == word])
@@ -46,7 +46,7 @@ def calc_tfidf(doc, index, total_doc_count, method, include_tf_zero=True):
                 idf = 1
             elif method[1] == "t":
                 doc_freq = 1 if word not in index else len(index[word].postings) + 1
-                idf = log(total_doc_count / doc_freq)
+                idf = log(index_doc_count / doc_freq)
             else:
                 print("Not Supported tf-idf Method!")
 
@@ -60,11 +60,11 @@ def calc_tfidf(doc, index, total_doc_count, method, include_tf_zero=True):
     return v
 
 
-def tfidf_matrix(docs, index, total_doc_count, method):
+def tfidf_matrix(docs, index, index_doc_count, method):
     result = {}
     for key in docs:
         doc = docs[key]
-        result[key] = calc_tfidf(doc, index, total_doc_count, method)
+        result[key] = calc_tfidf(doc, index, index_doc_count, method)
     df = pandas.DataFrame(result).fillna(0).transpose()
 
     df = df.reindex(sorted(df.columns), axis=1)
