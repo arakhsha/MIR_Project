@@ -1,4 +1,3 @@
-import itertools
 import random
 from abc import abstractmethod
 from collections import Counter
@@ -77,6 +76,7 @@ def tfidf_matrix(docs, index, index_doc_count, method):
     df = df.reindex(sorted(df.columns), axis=1)
     return df
 
+
 class Classifier:
 
     @abstractmethod
@@ -111,8 +111,6 @@ class NBClassifier(Classifier):
         term_tag_count = 0
         if term in self.train_index:
             for posting in self.train_index[term].postings:
-                # print(posting.doc_id)
-                # print([doc_id for doc_id in train_docs])
                 if self.train_docs[posting.doc_id].tag == tag:
                     term_tag_count += len(posting.positions)
             return log((term_tag_count + 1) / (self.tag_word_count[tag] + len(index.keys())))
@@ -282,9 +280,6 @@ if __name__ == "__main__":
 
     sliced_index = slice_index(index=index, n=200)
 
-    # classifier = NBClassifier()
-
-    # print(sampled)
     while True:
         method_name = input("Select classifier: 1. Naive Bayes 2. k-NN 3. SVM 4. Random Forest 5.exit")
         classifier = None

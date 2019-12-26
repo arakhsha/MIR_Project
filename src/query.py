@@ -1,11 +1,4 @@
-import heapq
-from collections import Counter
-from math import log, sqrt
 import random
-
-
-import pandas
-
 from Doc import Doc
 from data_extaction import read_docs
 from positional_indexing import PositionalIndexer
@@ -27,8 +20,7 @@ def classify(docs):
     sample_size = 500
     for i in random.sample(train_docs.keys(), sample_size):
         sampled[i] = train_docs[i]
-    train_docs = sampled
-    classifier = RFClassifier(train_docs, sliced_index)
+    classifier = RFClassifier(sampled, sliced_index, len(train_docs))
     classifier.train()
     y_pred = classifier.classify(docs)
     doc_ids = [doc.id for doc in docs.values()]
