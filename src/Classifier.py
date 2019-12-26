@@ -7,7 +7,7 @@ from math import log, sqrt
 
 import pandas
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
+from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, recall_score, precision_score
 
 from data_extaction import read_docs
 from positional_indexing import PositionalIndexer
@@ -185,7 +185,7 @@ class KNNClassifier(Classifier):
 
     @staticmethod
     def find_best_parameter(train_data, train_index, index_doc_count, validation_data, possible_parameters):
-        maximum_precision = -1.0
+        maximum_accuracy = -1.0
         arg_max_param = None
         validation_true = [doc.tag for doc in validation_data.values()]
         classifier = KNNClassifier(train_data, train_index, index_doc_count)
@@ -193,14 +193,11 @@ class KNNClassifier(Classifier):
             classifier.set_param(current_param)
             classifier.train()
             validation_pred = classifier.classify(validation_data)
-            precision = precision_recall_fscore_support(y_true=validation_true,
-                                                        y_pred=validation_pred,
-                                                        average='macro',
-                                                        zero_division=0)[0]
-            print(str(current_param) + ":\t" + str(precision))
-            if maximum_precision < precision:
+            accuracy = accuracy_score(y_true=validation_true, y_pred=validation_pred)
+            print(str(current_param) + ":\t" + str(accuracy))
+            if maximum_accuracy < accuracy:
                 arg_max_param = current_param
-                maximum_precision = precision
+                maximum_accuracy = accuracy
 
         return arg_max_param
 
@@ -234,7 +231,7 @@ class SVMClassifier(SKLearnClassifier):
 
     @staticmethod
     def find_best_parameter(train_data, train_index, index_doc_count, validation_data, possible_parameters):
-        maximum_precision = -1.0
+        maximum_accuracy = -1.0
         arg_max_param = None
         validation_true = [doc.tag for doc in validation_data.values()]
         classifier = SVMClassifier(train_data, train_index, index_doc_count)
@@ -242,14 +239,11 @@ class SVMClassifier(SKLearnClassifier):
             classifier.set_param(current_param)
             classifier.train()
             validation_pred = classifier.classify(validation_data)
-            precision = precision_recall_fscore_support(y_true=validation_true,
-                                                        y_pred=validation_pred,
-                                                        average='macro',
-                                                        zero_division=0)[0]
-            print(str(current_param) + ":\t" + str(precision))
-            if maximum_precision < precision:
+            accuracy = accuracy_score(y_true=validation_true, y_pred=validation_pred)
+            print(str(current_param) + ":\t" + str(accuracy))
+            if maximum_accuracy < accuracy:
                 arg_max_param = current_param
-                maximum_precision = precision
+                maximum_accuracy = accuracy
 
         return arg_max_param
 
@@ -322,4 +316,10 @@ if __name__ == "__main__":
             classifier.train()
             y_pred = classifier.classify(test_docs)
             y_true = [doc.tag for doc in test_docs.values()]
+            print("Confusion Matrix:")
             print(confusion_matrix(y_true=y_true, y_pred=y_pred))
+            print("Accuracy:\t"+str(accuracy_score(y_true=y_true, y_pred=y_pred)))
+            print("F1 Scores:\t"+str(f1_score(y_true=y_true, y_pred=y_pred, average=None)))
+            print("Precision Scores:\t"+str(precision_score(y_true, y_pred, average=None)))
+            print("Recall Scores:\t"+str(recall_score(y_true, y_pred, average=None)))
+
