@@ -116,7 +116,8 @@ class KNNClassifier(Classifier):
             validation_pred = classifier.classify(validation_data)
             precision = precision_recall_fscore_support(y_true=validation_true,
                                                         y_pred=validation_pred,
-                                                        average='macro')[0]
+                                                        average='macro',
+                                                        zero_division=0)[0]
             print(str(current_param)+":\t"+str(precision))
             if maximum_precision < precision:
                 arg_max_param = current_param
@@ -165,7 +166,8 @@ class SVMClassifier(SKLearnClassifier):
             validation_pred = classifier.classify(validation_data)
             precision = precision_recall_fscore_support(y_true=validation_true,
                                                         y_pred=validation_pred,
-                                                        average='macro')[0]
+                                                        average='macro',
+                                                        zero_division=0)[0]
             print(str(current_param)+":\t"+str(precision))
             if maximum_precision < precision:
                 arg_max_param = current_param
@@ -196,7 +198,7 @@ if __name__ == "__main__":
     index = PositionalIndexer(train_docs, 1).index
     print("Index Created Successfully!")
 
-    index = slice_index(index=index, n=200)
+    sliced_index = slice_index(index=index, n=200)
 
     sampled = {}
     sample_size = 500
@@ -210,25 +212,24 @@ if __name__ == "__main__":
         method_name = input("Select classifier: 1. Naive Bayes 2. k-NN 3. SVM 4. Random Forest 5.exit")
         classifier = None
         if method_name == "1":
-            train_docs = sampled
-            classifier = NBClassifier(train_docs, index)
+            classifier = NBClassifier(train_docs, sliced_index)
         elif method_name == "2":
             train_size = int(0.9*sample_size)
             train_docs, validation_docs = (dict(list(sampled.items())[:train_size]),
                                            dict(list(sampled.items())[train_size:]))
-            parameter = KNNClassifier.find_best_parameter(train_docs, index, validation_docs, [1, 5, 9])
+            parameter = KNNClassifier.find_best_parameter(train_docs, sliced_index, validation_docs, [1, 5, 9])
             print("Best parameter is:"+str(parameter))
-            classifier = KNNClassifier(sampled, index, parameter)
+            classifier = KNNClassifier(sampled, sliced_index, parameter)
         elif method_name == "3":
             train_size = int(0.9*sample_size)
             train_docs, validation_docs = (dict(list(sampled.items())[:train_size]),
                                            dict(list(sampled.items())[train_size:]))
-            parameter = SVMClassifier.find_best_parameter(train_docs, index, validation_docs, [0.5, 1, 1.5, 2])
+            parameter = SVMClassifier.find_best_parameter(train_docs, sliced_index, validation_docs, [0.5, 1, 1.5, 2])
             print("Best parameter is:" + str(parameter))
-            classifier = SVMClassifier(train_docs, index, parameter)
+            classifier = SVMClassifier(train_docs, sliced_index, parameter)
         elif method_name == "4":
             train_docs = sampled
-            classifier = RFClassifier(train_docs, index)
+            classifier = RFClassifier(train_docs, sliced_index)
         elif method_name == "5":
             exit()
         else:
