@@ -1,5 +1,6 @@
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.mixture import GaussianMixture
 import pandas as pd
 import gensim
 from gensim.models import Doc2Vec
@@ -72,20 +73,27 @@ if __name__ == "__main__":
     data_text = data['Text'].values
 
     n_clusters = 4
-    matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=True)
 
-    result = cluster_kmeans(matrix=matrix, n_clusters=n_clusters)
-    graph_pca_clustering(matrix=matrix, n_clusters=n_clusters, labels=result['labels'],
-                         path="../Phase3Data/KMeans_tf_idf.png", special_points=result['centroids'])
+    vec_methods = ["tf-idf", "word2vec"]
+    clust_methods = ["kmeans", "gmm", "hierarchical"]
+    for vec_method in vec_methods:
 
-    id_label_df = pd.DataFrame({"ID": data["ID"].values, "Text": result["labels"]})
-    id_label_df.to_csv(path_or_buf="../Phase3Data/KMeans_tf_idf.csv", index=False)
+        if vec_method == "tf-idf":
+            matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=True)
+        else:
+            matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=False)
 
-    matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=False)
+        for clust_method in clust_methods:
+            if clust_method == "kmeans":
+                result = cluster_kmeans(matrix=matrix, n_clusters=n_clusters)
+            elif clust_method == "gmm":
+                pass
+            elif clust_method == "hierarchical":
+                pass
 
-    result = cluster_kmeans(matrix=matrix, n_clusters=n_clusters)
-    graph_pca_clustering(matrix=matrix, n_clusters=n_clusters, labels=result['labels'],
-                         path="../Phase3Data/KMeans_word2vec.png", special_points=result['centroids'])
+            title = vec_method + "_" + clust_method
+            graph_pca_clustering(matrix=matrix, n_clusters=n_clusters, labels=result['labels'],
+                                 path="../Phase3Data/%s.png" % title, special_points=result['centroids'])
 
-    id_label_df = pd.DataFrame({"ID": data["ID"].values, "Text": result["labels"]})
-    id_label_df.to_csv(path_or_buf="../Phase3Data/KMeans_word2vec.csv", index=False)
+            id_label_df = pd.DataFrame({"ID": data["ID"].values, "Text": result["labels"]})
+            id_label_df.to_csv(path_or_buf="../Phase3Data/%s.csv" % title, index=False)
