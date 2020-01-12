@@ -1,4 +1,4 @@
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.mixture import GaussianMixture
 import pandas as pd
@@ -31,24 +31,45 @@ def vectorize_data(data, tf_idf_or_word2vec):
         return d2v_model.docvecs.vectors_docs
 
 
-def graph_pca_clustering(matrix, n_clusters, labels, path, special_points=None, ):
-    if special_points is None:
-        special_points = []
-
-    pca = PCA(n_components=3).fit(matrix)
+def graph_pca_clustering(matrix, n_clusters, labels, path, special_points=None):
+    pca = PCA(n_components=2).fit(matrix)
 
     datapoint = pca.transform(matrix)
 
     import matplotlib.pyplot as plt
 
     color_palette = ["#69D2E7", "#A7DBD8", "#E0E4CC", "#F38630", "#FA6900", "#FE4365", "#FC9D9A", "#F9CDAD", "#C8C8A9",
-              "#83AF9B"]
+                     "#83AF9B"]
     label1 = color_palette[:n_clusters]
     color = [label1[i] for i in labels]
     plt.scatter(datapoint[:, 0], datapoint[:, 1], c=color)
-    special_points = pca.transform(special_points)
-    plt.scatter(special_points[:, 0], special_points[:, 1], marker='^', s=150, c='#000000')
+
+    if special_points is not None:
+        special_points = pca.transform(special_points)
+        plt.scatter(special_points[:, 0], special_points[:, 1], marker='^', s=150, c='#000000')
     plt.savefig(path)
+    plt.clf()
+
+
+def graph_dendrogram(matrix, path):
+    from matplotlib import pyplot as plt
+    from scipy.cluster.hierarchy import dendrogram, linkage
+    import numpy as np
+    np.set_printoptions(precision=5, suppress=True)  # suppress scientific float notation
+    # creating the linkage matrix
+    H_cluster = linkage(matrix, 'ward')
+    plt.title('Hierarchical Clustering Dendrogram (truncated)')
+    plt.xlabel('sample index or (cluster size)')
+    plt.ylabel('distance')
+    dendrogram(
+        H_cluster,
+        truncate_mode='lastp',  # show only the last p merged clusters
+        leaf_rotation=90.,
+        leaf_font_size=12,
+        show_contracted=True,  # to get a distribution impression in truncated branches
+    )
+    plt.savefig(path)
+    plt.clf()
 
 
 def cluster_kmeans(matrix, n_clusters=4):
@@ -66,9 +87,10 @@ def cluster_GMM(matrix, n_clusters=4):
             'score': gmm_model.score(matrix)}
 
 
-
-def cluster_hierarchical(matrix, n_cluster = 4):
-    pass
+def cluster_hierarchical(matrix, n_clusters=4):
+    h_model = AgglomerativeClustering(n_clusters=n_clusters).fit(matrix)
+    return {'labels': h_model.labels_.tolist(),
+            'centroids': None}
 
 
 if __name__ == "__main__":
@@ -94,11 +116,11 @@ if __name__ == "__main__":
             elif clust_method == "gmm":
                 result = cluster_GMM(matrix=matrix, n_clusters=n_clusters)
             elif clust_method == "hierarchical":
-                pass
-
+                result = cluster_hierarchical(matrix=matrix, n_clusters=n_clusters)
+                graph_dendrogram(matrix, "../Phase3Data/%s_Dendrogram.pdf" % title)
 
             graph_pca_clustering(matrix=matrix, n_clusters=n_clusters, labels=result['labels'],
-                                 path="../Phase3Data/%s.png" % title, special_points=result['centroids'])
+                                 path="../Phase3Data/%s_PCA.pdf" % title, special_points=result['centroids'])
 
             id_label_df = pd.DataFrame({"ID": data["ID"].values, "Text": result["labels"]})
             id_label_df.to_csv(path_or_buf="../Phase3Data/%s.csv" % title, index=False)
