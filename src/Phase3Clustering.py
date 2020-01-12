@@ -59,8 +59,11 @@ def cluster_kmeans(matrix, n_clusters=4):
             'score': kmeans_model.score(matrix)}
 
 
-def cluster_GMM(matrix, n_cluster=4):
-    pass
+def cluster_GMM(matrix, n_clusters=4):
+    gmm_model = GaussianMixture(n_components=n_clusters).fit(matrix)
+    return {'labels': gmm_model.predict(matrix),
+            'centroids': gmm_model.means_,
+            'score': gmm_model.score(matrix)}
 
 
 
@@ -84,14 +87,16 @@ if __name__ == "__main__":
             matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=False)
 
         for clust_method in clust_methods:
+            title = vec_method + "_" + clust_method
+            print("Doing %s" % title)
             if clust_method == "kmeans":
                 result = cluster_kmeans(matrix=matrix, n_clusters=n_clusters)
             elif clust_method == "gmm":
-                pass
+                result = cluster_GMM(matrix=matrix, n_clusters=n_clusters)
             elif clust_method == "hierarchical":
                 pass
 
-            title = vec_method + "_" + clust_method
+
             graph_pca_clustering(matrix=matrix, n_clusters=n_clusters, labels=result['labels'],
                                  path="../Phase3Data/%s.png" % title, special_points=result['centroids'])
 
