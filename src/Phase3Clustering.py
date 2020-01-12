@@ -1,11 +1,9 @@
-import itertools
-from abc import abstractmethod
-
+from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 import pandas as pd
 import gensim
 from gensim.models import Doc2Vec
-import numpy as np
+from sklearn.decomposition import PCA
 
 
 def vectorize_data(data, tf_idf_or_word2vec):
@@ -16,8 +14,8 @@ def vectorize_data(data, tf_idf_or_word2vec):
     :return: doc x words matrix
     """
     if tf_idf_or_word2vec:
-        vectorizer = TfidfVectorizer()
-        return vectorizer.fit_transform(data)
+        vectorizer = TfidfVectorizer(encoding='ISO-8859-1', max_features=100)
+        return vectorizer.fit_transform(data).toarray()
     else:
         LabeledSentence1 = gensim.models.doc2vec.TaggedDocument
         all_content_train = []
@@ -29,45 +27,65 @@ def vectorize_data(data, tf_idf_or_word2vec):
                             alpha=0.025, min_alpha=0.001)
         d2v_model.train(all_content_train, total_examples=d2v_model.corpus_count, epochs=10, start_alpha=0.002,
                         end_alpha=-0.016)
-        return d2v_model.docvecs.doctag_syn0
+        return d2v_model.docvecs.vectors_docs
 
 
-class KMeans():
+def graph_pca_clustering(matrix, n_clusters, labels, path, special_points=None, ):
+    if special_points is None:
+        special_points = []
 
-    def get_randomized_centroids(self, matrix):
-        ids = np.random.permutation(matrix.shape[0])[:self.k]
-        return matrix[ids]
+    pca = PCA(n_components=3).fit(matrix)
 
-    def cluster(self, matrix):
-        centroids = self.get_randomized_centroids(matrix)
+    datapoint = pca.transform(matrix)
 
+    import matplotlib.pyplot as plt
 
-    def __init__(self, k, max_iter=100):
-        self.k = k
-        self.max_iter = max_iter
-
-
-class GMM():
-
-    def cluster(self, matrix, k):
-        pass
+    color_palette = ["#69D2E7", "#A7DBD8", "#E0E4CC", "#F38630", "#FA6900", "#FE4365", "#FC9D9A", "#F9CDAD", "#C8C8A9",
+              "#83AF9B"]
+    label1 = color_palette[:n_clusters]
+    color = [label1[i] for i in labels]
+    plt.scatter(datapoint[:, 0], datapoint[:, 1], c=color)
+    special_points = pca.transform(special_points)
+    plt.scatter(special_points[:, 0], special_points[:, 1], marker='^', s=150, c='#000000')
+    plt.savefig(path)
 
 
-class Hierarchical():
+def cluster_kmeans(matrix, n_clusters=4):
+    kmeans_model = KMeans(n_clusters=n_clusters, init='k-means++', max_iter=100)
+    X = kmeans_model.fit(matrix)
+    return {'labels': kmeans_model.labels_.tolist(),
+            'centroids': kmeans_model.cluster_centers_,
+            'score': kmeans_model.score(matrix)}
 
-    def cluster(self, matrix, k):
-        pass
+
+def cluster_GMM(matrix, n_cluster=4):
+    pass
+
+
+
+def cluster_hierarchical(matrix, n_cluster = 4):
+    pass
 
 
 if __name__ == "__main__":
     data = pd.read_csv("../Phase3Data/Data.csv", encoding="ISO-8859-1")
-    data_text = data['Text'].values()
-    print(data.head())
-    print(data.columns)
+    data_text = data['Text'].values
 
-    matrix = vectorize_data(data=data, tf_idf_or_word2vec=True)
-    kmeans = KMeans(4)
-    print(kmeans.cluster(matrix))
+    n_clusters = 4
+    matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=True)
 
-    # Printing the shape of the data and its description
-    print(data.shape)
+    result = cluster_kmeans(matrix=matrix, n_clusters=n_clusters)
+    graph_pca_clustering(matrix=matrix, n_clusters=n_clusters, labels=result['labels'],
+                         path="../Phase3Data/KMeans_tf_idf.png", special_points=result['centroids'])
+
+    id_label_df = pd.DataFrame({"ID": data["ID"].values, "Text": result["labels"]})
+    id_label_df.to_csv(path_or_buf="../Phase3Data/KMeans_tf_idf.csv", index=False)
+
+    matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=False)
+
+    result = cluster_kmeans(matrix=matrix, n_clusters=n_clusters)
+    graph_pca_clustering(matrix=matrix, n_clusters=n_clusters, labels=result['labels'],
+                         path="../Phase3Data/KMeans_word2vec.png", special_points=result['centroids'])
+
+    id_label_df = pd.DataFrame({"ID": data["ID"].values, "Text": result["labels"]})
+    id_label_df.to_csv(path_or_buf="../Phase3Data/KMeans_word2vec.csv", index=False)
