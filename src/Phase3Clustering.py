@@ -97,30 +97,32 @@ if __name__ == "__main__":
     data = pd.read_csv("../Phase3Data/Data.csv", encoding="ISO-8859-1")
     data_text = data['Text'].values
 
-    n_clusters = 4
+    n_clusters = [3,4]
 
     vec_methods = ["tf-idf", "word2vec"]
     clust_methods = ["kmeans", "gmm", "hierarchical"]
-    for vec_method in vec_methods:
+    for n in n_clusters:
+        for vec_method in vec_methods:
 
-        if vec_method == "tf-idf":
-            matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=True)
-        else:
-            matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=False)
+            if vec_method == "tf-idf":
+                matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=True)
+            else:
+                matrix = vectorize_data(data=data_text, tf_idf_or_word2vec=False)
 
-        for clust_method in clust_methods:
-            title = vec_method + "_" + clust_method
-            print("Doing %s" % title)
-            if clust_method == "kmeans":
-                result = cluster_kmeans(matrix=matrix, n_clusters=n_clusters)
-            elif clust_method == "gmm":
-                result = cluster_GMM(matrix=matrix, n_clusters=n_clusters)
-            elif clust_method == "hierarchical":
-                result = cluster_hierarchical(matrix=matrix, n_clusters=n_clusters)
-                graph_dendrogram(matrix, "../Phase3Data/%s_Dendrogram.pdf" % title)
+            for clust_method in clust_methods:
+                title = vec_method + "_" + clust_method + "_" + str(n)
+                print("Doing %s" % title)
+                if clust_method == "kmeans":
+                    result = cluster_kmeans(matrix=matrix, n_clusters=n)
+                elif clust_method == "gmm":
+                    result = cluster_GMM(matrix=matrix, n_clusters=n)
+                elif clust_method == "hierarchical":
+                    result = cluster_hierarchical(matrix=matrix, n_clusters=n)
+                    if n == 3:
+                        graph_dendrogram(matrix, "../Phase3Data/%s_Dendrogram.pdf" % title)
 
-            graph_pca_clustering(matrix=matrix, n_clusters=n_clusters, labels=result['labels'],
-                                 path="../Phase3Data/%s_PCA.pdf" % title, special_points=result['centroids'])
+                graph_pca_clustering(matrix=matrix, n_clusters=n, labels=result['labels'],
+                                     path="../Phase3Data/%s_PCA.pdf" % title, special_points=result['centroids'])
 
-            id_label_df = pd.DataFrame({"ID": data["ID"].values, "Text": result["labels"]})
-            id_label_df.to_csv(path_or_buf="../Phase3Data/%s.csv" % title, index=False)
+                id_label_df = pd.DataFrame({"ID": data["ID"].values, "Text": result["labels"]})
+                id_label_df.to_csv(path_or_buf="../Phase3Data/%s.csv" % title, index=False)
