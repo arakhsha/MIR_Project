@@ -1,11 +1,13 @@
 import itertools
 from abc import abstractmethod
 
+from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 import pandas as pd
 import gensim
 from gensim.models import Doc2Vec
-import numpy as np
+from sklearn.decomposition import PCA
+
 
 
 def vectorize_data(data, tf_idf_or_word2vec):
@@ -32,19 +34,13 @@ def vectorize_data(data, tf_idf_or_word2vec):
         return d2v_model.docvecs.doctag_syn0
 
 
-class KMeans():
-
-    def get_randomized_centroids(self, matrix):
-        ids = np.random.permutation(matrix.shape[0])[:self.k]
-        return matrix[ids]
-
-    def cluster(self, matrix):
-        centroids = self.get_randomized_centroids(matrix)
-
-
-    def __init__(self, k, max_iter=100):
-        self.k = k
-        self.max_iter = max_iter
+def cluster_kmeans(self, matrix):
+    kmeans_model = KMeans(n_clusters=4, init='k-means++', max_iter=100)
+    X = kmeans_model.fit(matrix)
+    labels = kmeans_model.labels_.tolist()
+    l = kmeans_model.fit_predict(matrix)
+    pca = PCA(n_components=2).fit(matrix)
+    datapoint = pca.transform(matrix)
 
 
 class GMM():
