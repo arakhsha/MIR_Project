@@ -157,3 +157,6 @@ if __name__ == "__main__":
         preprocessor.preprocess(input("Enter text:"), True)
     elif task == "2":
         preprocessor.print_high_freq_tokens()
+   #  print(preprocessor.preprocess("""
+   # Parmalat to sue auditors PARMALAT, the bankrupt Italian food company, is suing outside auditors Grant Thornton and Deloitte  amp; Touche, seeking 5.5 billion in damages.
+   #  """))

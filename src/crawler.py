@@ -81,6 +81,8 @@ def continue_progress(queue, papers, paper_count):
                 print("Saved Progress.")
                 save_progress(queue, papers)
 
+            if paperId == "4bd669b70ec1d1fa2d7825bdf7a17ae7c80f4480":
+                print(queue)
     return papers
 
 
@@ -105,12 +107,12 @@ def read_progress(queue_filename, papers_filename):
 
 
 if __name__ == "__main__":
-    papers = crawl("../data/semantic_scholar/start.txt", 5)
-    # queue, papers = read_progress("../data/semantic_scholar/last_queue.json",
-    #                               "../data/semantic_scholar/last_papers.json")
+    # papers = crawl("../data/semantic_scholar/start.txt", 25)
+    queue, papers = read_progress("../data/semantic_scholar/last_queue.json",
+                                  "../data/semantic_scholar/last_papers.json")
     # print(len(papers))
     # print(list(papers.values())[0:3])
-    # papers = continue_progress(queue, papers, 5000)
+    papers = continue_progress(queue, papers, 50)
     write_results("../data/semantic_scholar/crawled_papers.json", papers)
 
     # print(papers)

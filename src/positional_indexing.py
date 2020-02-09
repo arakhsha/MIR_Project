@@ -122,26 +122,28 @@ if __name__ == "__main__":
             print("No Saved File Found!")
             exit()
 
-    while True:
-        task = input("What do you want to do?\n"
-                     "1. Show Posting List for a Term\n"
-                     "2. Show Positions of a Word in a Document\n"
-                     "exit. exit")
-        if task == "exit":
-            break
+    print({x:{p.doc_id:p.positions for p in index.index[x].postings} for x in index.index})
 
-        record = None
-        if task == "1" or task == "2":
-            term = input("Enter Term:")
-            record = index.get_record(term)
-            if record is not None:
-                print([posting.doc_id for posting in record.postings])
-                if task == "2":
-                    doc_id = int(input("Enter doc_id:"))
-                    posting = record.get_posting(doc_id)
-                    if posting is not None:
-                        print(posting.positions)
-                    else:
-                        print("Posting Not Found!")
-            else:
-                print("Term Not Found!")
+    # while True:
+    #     task = input("What do you want to do?\n"
+    #                  "1. Show Posting List for a Term\n"
+    #                  "2. Show Positions of a Word in a Document\n"
+    #                  "exit. exit")
+    #     if task == "exit":
+    #         break
+    #
+    #     record = None
+    #     if task == "1" or task == "2":
+    #         term = input("Enter Term:")
+    #         record = index.get_record(term)
+    #         if record is not None:
+    #             print([posting.doc_id for posting in record.postings])
+    #             if task == "2":
+    #                 doc_id = int(input("Enter doc_id:"))
+    #                 posting = record.get_posting(doc_id)
+    #                 if posting is not None:
+    #                     print(posting.positions)
+    #                 else:
+    #                     print("Posting Not Found!")
+    #         else:
+    #             print("Term Not Found!")
